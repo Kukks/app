@@ -6,6 +6,7 @@ using BTCPayServer.Controllers.Greenfield;
 using BTCPayServer.Data;
 using BTCPayServer.Fido2;
 using BTCPayServer.Logging;
+using BTCPayServer.Plugins.Impersonation;
 using BTCPayServer.Security.Greenfield;
 using BTCPayServer.Services;
 using BTCPayServer.Services.Apps;
@@ -38,6 +39,8 @@ public partial class AppApiController(
     DefaultRulesCollection defaultRules,
     RateFetcher rateFactory,
     UserLoginCodeService userLoginCodeService,
+    UserService userService,
+    PermissionService permissionService,
     IAuthorizationService authService,
     Logs logs)
     : Controller

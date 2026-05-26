@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
@@ -39,10 +39,12 @@
     </ProjectReference>
     <EmbeddedResource Include="Resources\**" />
     <PackageReference Include="Grpc.AspNetCore" Version="2.65.0"/>
-    <PackageReference Include="Laraue.EfCoreTriggers.PostgreSql" Version="8.0.3" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.12.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.12"/>
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.11" />
+    <PackageReference Include="Laraue.EfCoreTriggers.PostgreSql" Version="10.4.0" />
+    <!-- Pin to 5.3.0 to keep all Microsoft.CodeAnalysis.* transitive deps (pulled by
+         BTCPayServer.Rating and EntityFrameworkCore.Design 10.0.6) on a single consistent version. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.3.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.6"/>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.1" />
     <PackageReference Include="VSS" Version="1.0.1" />
   </ItemGroup>
 </Project>

@@ -7,7 +7,6 @@ using BTCPayApp.Core.BTCPayServer;
 using BTCPayServer.Abstractions.Constants;
 using BTCPayServer.Data;
 using BTCPayServer.HostedServices;
-using BTCPayServer.Lightning;
 using BTCPayServer.Plugins.App.Extensions;
 using BTCPayServer.Services;
 using Dapper;
@@ -329,11 +328,6 @@ public class BTCPayAppHub : Hub<IBTCPayAppHubClient>, IBTCPayAppHubServer
         }
         return result;
     }
-    public async Task SendInvoiceUpdate( LightningInvoice lightningInvoice)
-    {
-        await _appState.InvoiceUpdate(Context.ConnectionId, lightningInvoice);
-    }
-
     public async Task<long?> GetCurrentMaster()
     {
         return await _appState.GetCurrentMaster(Context.ConnectionId);

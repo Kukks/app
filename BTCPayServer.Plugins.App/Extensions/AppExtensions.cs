@@ -1,5 +1,4 @@
 ﻿using BTCPayServer.Abstractions.Extensions;
-using BTCPayServer.Lightning;
 using BTCPayServer.Plugins.App.Data;
 using Laraue.EfCoreTriggers.PostgreSql.Extensions;
 using Microsoft.AspNetCore.Builder;
@@ -13,7 +12,6 @@ public static class AppExtensions
     {
         serviceCollection.AddGrpc();
         serviceCollection.AddSingleton<BTCPayAppState>();
-        serviceCollection.AddSingleton<ILightningConnectionStringHandler, BTCPayAppLightningConnectionStringHandler>();
         serviceCollection.AddSingleton<AppPluginDbContextFactory>();
         serviceCollection.AddDbContext<AppPluginDbContext>((provider, o) =>
         {

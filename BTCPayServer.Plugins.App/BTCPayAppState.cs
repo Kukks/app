@@ -54,7 +54,6 @@ public class BTCPayAppState : IHostedService
     private CompositeDisposable? _compositeDisposable;
     internal ConcurrentDictionary<string, ConnectedInstance> Connections { get; set; } = new();
     private static readonly SemaphoreSlim _lock = new(1, 1);
-    public event EventHandler<(string, LightningInvoice)>? OnInvoiceUpdate;
     public event EventHandler<string>? MasterUserDisconnected;
 
     public BTCPayAppState(
@@ -535,15 +534,6 @@ public class BTCPayAppState : IHostedService
         {
             await AddToGroup(group, contextConnectionId);
         }
-    }
-
-    public Task InvoiceUpdate(string contextConnectionId, LightningInvoice lightningInvoice)
-    {
-        if (!Connections.TryGetValue(contextConnectionId, out var connectedInstance) || !connectedInstance.Master)
-            return Task.CompletedTask;
-
-        OnInvoiceUpdate?.Invoke(this, (connectedInstance.UserId, lightningInvoice));
-        return Task.CompletedTask;
     }
 
     //what are we adding to groups?

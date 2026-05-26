@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using BTCPayServer.Client;
 using BTCPayServer.Security.Greenfield;
+using BTCPayServer.Services;
 using Microsoft.AspNetCore.Http;
 
 namespace BTCPayServer.Plugins.App.Extensions;
@@ -16,14 +17,14 @@ public static class HttpContextExtensions
             .Select(claim => claim.Value).ToArray();
     }
 
-    public static bool HasPermission(this HttpContext context, Permission permission)
+    public static bool HasPermission(this HttpContext context, Permission permission, PermissionService permissionService)
     {
         foreach (var claim in context.User.Claims.Where(c =>
                      c.Type.Equals(GreenfieldConstants.ClaimTypes.Permission, StringComparison.InvariantCultureIgnoreCase)))
         {
             if (Permission.TryParse(claim.Value, out var claimPermission))
             {
-                if (claimPermission.Contains(permission))
+                if (permissionService.Contains(claimPermission, permission))
                 {
                     return true;
                 }
