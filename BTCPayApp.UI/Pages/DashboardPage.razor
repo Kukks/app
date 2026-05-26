@@ -14,7 +14,6 @@
 @inject IState<UIState> UIState
 @inject IState<StoreState> StoreState
 @inject IAccountManager AccountManager
-@inject ConfigProvider ConfigProvider
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 <PageTitle>Dashboard</PageTitle>
@@ -53,26 +52,6 @@
                     <label class="btn btn-link" for="BalancePeriodTwoYears">2Y</label>
                 </InputRadioGroup>
             </div>
-            @if (true || TotalBalance is > 0)
-            {
-                <div class="text-center my-5">
-                    <NavLink href="@Routes.Withdraw" class="d-inline-flex align-items-center gap-1 fs-5 bg-light rounded-pill px-5 py-2 fw-semibold">
-                        <span class="ps-2">Withdraw</span>
-                        <Icon Symbol="caret-right" />
-                    </NavLink>
-                </div>
-            }
-            @if (!_config!.RecoveryPhraseVerified)
-            {
-                <div class="box d-flex gap-2 my-5">
-                    <Icon Symbol="info" class="mt-1" />
-                    <span>
-                        Please take a moment to
-                        <NavLink href="@Routes.WalletSeed">secure your recovery phrase</NavLink>.
-                        This is important to ensure you can to access and restore your wallet.
-                    </span>
-                </div>
-            }
             @if (PosAppId != null)
             {
                 @if (PosSalesStatsLoading || PosSalesStats is not null)
@@ -92,15 +71,7 @@
     [SupplyParameterFromQuery]
     public string? Success { get; set; }
 
-    private BTCPayAppConfig? _config;
     private string? _successMessage;
-
-    protected override async Task OnInitializedAsync()
-    {
-        await base.OnInitializedAsync();
-
-        _config = await ConfigProvider.Get<BTCPayAppConfig>(BTCPayAppConfig.Key) ?? new BTCPayAppConfig();
-    }
 
     protected override void OnParametersSet()
     {

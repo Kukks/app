@@ -379,7 +379,7 @@
 
     private async Task ToggleArchive()
     {
-        await AccountManager.GetClient().ArchiveInvoice(StoreId, InvoiceId);
+        await AccountManager.GetClient().ArchiveInvoice(InvoiceId);
         _successMessage = "The invoice has been archived and will no longer appear in the invoice list by default";
         if (!string.IsNullOrEmpty(StoreId) && !string.IsNullOrEmpty(InvoiceId))
         {

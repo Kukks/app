@@ -16,8 +16,6 @@ public static class Routes
     public const string Dashboard = "/dashboard";
     public const string Notifications = "/notifications";
     public const string EnterPasscode = "/passcode";
-    public const string Withdraw = "/withdraw";
-    public const string Transactions = "/transactions";
     public const string Invoices = "/invoices";
     public const string Invoice = "/invoices/{InvoiceId}";
     public const string Checkout = "/checkout/{InvoiceId}";
@@ -34,17 +32,9 @@ public static class Routes
     public const string InviteStoreUser = "/settings/store/{StoreId}/invite-user";
     public const string PosSettings = "/settings/pos/{AppId}";
     public const string NotificationSettings = "/settings/notifications";
-    public const string WalletSettings = "/settings/wallet";
-    public const string WalletSeed = "/settings/wallet/seed";
-    public const string WalletSeedConfirm = "/settings/wallet/seed-confirmation";
-    public const string WalletFunds = "/settings/wallet/funds";
-    public const string LightningSettings = "/settings/lightning";
-    public const string ChannelsPeers = "/settings/lightning/channels";
     public const string Account = "/settings/account";
     public const string ChangePassword = "/settings/password";
     public const string Pairing = "/settings/pairing";
-    public const string LightningSend = "/lightning/send";
-    public const string LightningReceive = "/lightning/receive";
     public const string ServerUsers = "/settings/server/users";
     public const string ServerUser = "/settings/server/users/{UserId}";
     public const string InviteServerUser = "/settings/server/invite-user";
