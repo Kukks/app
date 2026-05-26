@@ -4,7 +4,6 @@ using BTCPayApp.Core.BTCPayServer;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Helpers;
-using BTCPayApp.Core.LDK;
 using BTCPayApp.Core.Services;
 using BTCPayApp.Core.Wallet;
 using Laraue.EfCoreTriggers.SqlLite.Extensions;
@@ -37,12 +36,10 @@ public static class StartupExtensions
         serviceCollection.AddSingleton<BTCPayConnectionManager>();
         serviceCollection.AddSingleton<SyncService>();
         serviceCollection.AddSingleton<LoggingService>();
-        serviceCollection.AddSingleton<LightningNodeManager>();
         serviceCollection.AddSingleton<OnChainWalletManager>();
         serviceCollection.AddSingleton<BTCPayAppServerClient>();
         serviceCollection.AddSingleton<IBTCPayAppHubClient>(provider => provider.GetRequiredService<BTCPayAppServerClient>());
         serviceCollection.AddSingleton<IHostedService>(provider => provider.GetRequiredService<BTCPayConnectionManager>());
-        serviceCollection.AddSingleton<IHostedService>(provider => provider.GetRequiredService<LightningNodeManager>());
         serviceCollection.AddSingleton<IHostedService>(provider => provider.GetRequiredService<OnChainWalletManager>());
         serviceCollection.AddSingleton<AuthStateProvider>();
         serviceCollection.AddSingleton<AuthenticationStateProvider, AuthStateProvider>(provider => provider.GetRequiredService<AuthStateProvider>());
@@ -50,7 +47,6 @@ public static class StartupExtensions
         serviceCollection.AddSingleton(sp => (IAccountManager)sp.GetRequiredService<AuthenticationStateProvider>());
         serviceCollection.AddSingleton<IAuthorizationHandler, AuthorizationHandler>();
         serviceCollection.AddAuthorizationCore(options => options.AddPolicies());
-        serviceCollection.AddLDK();
 
         return serviceCollection;
     }
