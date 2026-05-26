@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
   <PropertyGroup>
-    <TargetFrameworks>net8.0-android;</TargetFrameworks>
-    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('linux'))">net8.0-android;</TargetFrameworks>
+    <TargetFrameworks>net10.0-android;</TargetFrameworks>
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('linux'))">net10.0-android;</TargetFrameworks>
     <OutputType>Exe</OutputType>
     <RootNamespace>BTCPayApp.Maui</RootNamespace>
     <UseMaui>true</UseMaui>
@@ -66,10 +66,10 @@
     <ProjectReference Include="..\BTCPayApp.Core\BTCPayApp.Core.csproj" />
     <ProjectReference Include="..\BTCPayApp.UI\BTCPayApp.UI.csproj" />
     <PackageReference Include="Plugin.Fingerprint" Version="3.0.0-beta.1" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="8.0.100" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.3" />
-    <PackageReference Include="Microsoft.Maui.Controls" Version="8.0.100" />
-    <PackageReference Include="Microsoft.Maui.Essentials" Version="8.0.100" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="10.0.70" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.6" />
+    <PackageReference Include="Microsoft.Maui.Controls" Version="10.0.70" />
+    <PackageReference Include="Microsoft.Maui.Essentials" Version="10.0.70" />
     <PackageReference Include="Plugin.NFC" Version="0.1.26" />
   </ItemGroup>
 

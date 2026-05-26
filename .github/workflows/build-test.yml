@@ -66,7 +66,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: 10.0.x
       - name: Install workloads
         run: dotnet workload install maui
       - name: Clean before build
@@ -76,7 +76,7 @@ jobs:
         # TODO: Use proper keystore once we switch to real releases
         # https://learn.microsoft.com/en-us/dotnet/maui/android/deployment/publish-cli?view=net-maui-8.0#code-try-4
         run: |
-          dotnet publish BTCPayApp.Maui/BTCPayApp.Maui.csproj -f net8.0-android -c Release -o publish/android
+          dotnet publish BTCPayApp.Maui/BTCPayApp.Maui.csproj -f net10.0-android -c Release -o publish/android
         env:
           ANDROID_SIGNING_PASSWORD: ${{ secrets.ANDROID_SIGNING_PASSWORD }}
       - name: Upload artifact
