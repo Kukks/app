@@ -3,7 +3,6 @@ using BTCPayApp.Core.Auth;
 using BTCPayApp.Core.BTCPayServer;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Extensions;
-using BTCPayApp.Core.Wallet;
 using BTCPayApp.Desktop;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -41,8 +40,6 @@ public class HeadlessTestNode : IDisposable
 
         var res = new HeadlessTestNode(nodeName, testOutputHelper, args);
         TestUtils.Eventually(() => Assert.Equal(BTCPayConnectionState.Init, res.ConnectionManager.ConnectionState));
-        TestUtils.Eventually(() => Assert.Equal(LightningNodeState.Init, res.LNManager.State));
-        TestUtils.Eventually(() => Assert.Equal(OnChainWalletState.Init, res.OnChainWalletManager.State));
 
         var appTask = res.App.StartAsync();
         await Task.WhenAny(appTask, res.App.Services.GetRequiredService<IHostApplicationLifetime>().ApplicationStarted.AsTask());
@@ -84,8 +81,6 @@ public class HeadlessTestNode : IDisposable
     }
 
     public BTCPayConnectionManager ConnectionManager => App.Services.GetRequiredService<BTCPayConnectionManager>();
-    public LightningNodeManager LNManager => App.Services.GetRequiredService<LightningNodeManager>();
-    public OnChainWalletManager OnChainWalletManager => App.Services.GetRequiredService<OnChainWalletManager>();
     public IAccountManager AccountManager => App.Services.GetRequiredService<IAccountManager>();
     public AuthStateProvider AuthStateProvider => App.Services.GetRequiredService<AuthStateProvider>();
 
