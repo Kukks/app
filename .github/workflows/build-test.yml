@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - master
+      - 'ark/**'
     paths-ignore:
       - '**/*.md'
       - '**/*.gitignore'
