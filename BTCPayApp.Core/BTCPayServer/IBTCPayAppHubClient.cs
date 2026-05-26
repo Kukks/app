@@ -12,18 +12,7 @@ public interface IBTCPayAppHubClient
     Task NotifyServerNode(string nodeInfo);
     Task TransactionDetected(TransactionDetectedRequest request);
     Task NewBlock(string block);
-    Task StartListen(string key);
-
-    Task<LightningInvoice> CreateInvoice(string key, CreateLightningInvoiceRequest createLightningInvoiceRequest);
-    Task<LightningInvoice?> GetLightningInvoice(string key, uint256 paymentHash);
-    Task<LightningPayment?> GetLightningPayment(string key, uint256 paymentHash);
-    Task CancelInvoice(string key, uint256 paymentHash);
-    Task<List<LightningPayment>> GetLightningPayments(string key, ListPaymentsParams request);
-    Task<List<LightningInvoice>> GetLightningInvoices(string key, ListInvoicesParams request);
-    Task<PayResponse> PayInvoice(string key, string bolt11, long? amountMilliSatoshi);
     Task MasterUpdated(long? deviceIdentifier);
-    Task<LightningNodeInformation> GetLightningNodeInfo(string key);
-    Task<LightningNodeBalance> GetLightningBalance(string key);
 }
 
 //methods available on the hub in the server
@@ -41,7 +30,6 @@ public interface IBTCPayAppHubServer
     Task<string> UpdatePsbt(string[] identifiers, string psbt);
     Task<Dictionary<string, CoinResponse[]>> GetUTXOs(string[] identifiers);
     Task<Dictionary<string, TxResp[]>> GetTransactions(string[] identifiers);
-    Task SendInvoiceUpdate(LightningInvoice lightningInvoice);
     Task<long?> GetCurrentMaster();
 }
 
