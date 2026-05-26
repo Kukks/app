@@ -11,7 +11,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\submodules\btcpayserver\BTCPayServer.Client\BTCPayServer.Client.csproj"/>
-    <PackageReference Include="AsyncKeyedLock" Version="7.1.4"/>
+    <ProjectReference Include="..\submodules\NArk\NArk.Abstractions\NArk.Abstractions.csproj"/>
+    <ProjectReference Include="..\submodules\NArk\NArk.Core\NArk.Core.csproj"/>
+    <ProjectReference Include="..\submodules\NArk\NArk.Swaps\NArk.Swaps.csproj"/>
+    <ProjectReference Include="..\submodules\NArk\NArk.Storage.EfCore\NArk.Storage.EfCore.csproj"/>
+    <PackageReference Include="AsyncKeyedLock" Version="8.0.2"/>
     <PackageReference Include="FlexLabs.EntityFrameworkCore.Upsert" Version="8.1.0"/>
     <PackageReference Include="Laraue.EfCoreTriggers.SqlLite" Version="8.1.2"/>
     <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="8.0.15" />
@@ -22,9 +26,9 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.11" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.2" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.0" />
     <PackageReference Include="NBitcoin" Version="10.0.3" />
     <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="8.0.11" />
     <PackageReference Include="Serilog.Extensions.Hosting" Version="8.0.0" />

@@ -2,3 +2,6 @@
 	path = submodules/btcpayserver
 	url = https://github.com/btcpayserver/btcpayserver
 	branch = mobile-working-branch
+[submodule "submodules/NArk"]
+	path = submodules/NArk
+	url = https://github.com/arkade-os/dotnet-sdk.git
