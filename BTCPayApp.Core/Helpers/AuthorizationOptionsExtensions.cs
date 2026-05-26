@@ -10,7 +10,7 @@ public static class AuthorizationOptionsExtensions
     public static AuthorizationOptions AddPolicies(this AuthorizationOptions options)
     {
         // BTCPay policies
-        foreach (var p in Policies.AllPolicies)
+        foreach (var p in PermissionContainment.AllPolicies)
         {
             options.AddPolicy(p);
         }
