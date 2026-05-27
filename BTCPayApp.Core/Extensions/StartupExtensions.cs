@@ -91,6 +91,20 @@ public static class StartupExtensions
         // which starts the Sweeper/Batch/Intent/VTXO-sync background services.
         serviceCollection.AddArkCoreServices();
 
+        // Boarding (on-chain entry) sync. AddArkCoreServices/ArkHostedLifecycle do
+        // NOT start the boarding poller, so wire it here (matching the NArk README):
+        // BoardingUtxoSyncService queries the IBitcoinBlockchain (Esplora, above)
+        // for confirmed UTXOs at our boarding addresses and upserts them into VTXO
+        // storage; BoardingUtxoPollService is the IHostedService that runs it every
+        // 30s while unspent boarding VTXOs exist, so deposits get swept into the
+        // Arkade without manual intervention.
+        serviceCollection.AddSingleton<BoardingUtxoSyncService>();
+        serviceCollection.AddSingleton<BoardingUtxoPollService>();
+        serviceCollection.AddSingleton<IHostedService>(sp => sp.GetRequiredService<BoardingUtxoPollService>());
+
+        // On-demand boarding-address derivation for the owner wallet.
+        serviceCollection.AddSingleton<ArkadeWalletService>();
+
         return serviceCollection;
     }
 }
