@@ -1,16 +1,15 @@
 using BTCPayApp.Core.Auth;
-using BTCPayApp.Core.Backup;
 using BTCPayApp.Core.BTCPayServer;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Helpers;
 using BTCPayApp.Core.Services;
-using Laraue.EfCoreTriggers.SqlLite.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using NArk.Storage.EfCore.Hosting;
 
 namespace BTCPayApp.Core.Extensions;
 
@@ -22,7 +21,6 @@ public static class StartupExtensions
         {
             var dir = provider.GetRequiredService<IDataDirectoryProvider>().GetAppDataDirectory().ConfigureAwait(false).GetAwaiter().GetResult();
             options.UseSqlite($"Data Source={dir}/app.db");
-            options.UseSqlLiteTriggers();
         });
 
         // Configure logging
@@ -30,10 +28,10 @@ public static class StartupExtensions
 
         serviceCollection.AddHostedService<AppDatabaseMigrator>();
         serviceCollection.AddSingleton<ConfigProvider, DatabaseConfigProvider>();
+        serviceCollection.AddArkEfCoreStorage<AppDbContext>(o => o.StoreDateTimeOffsetAsTicks = true);
         serviceCollection.AddMemoryCache();
         serviceCollection.AddHttpClient();
         serviceCollection.AddSingleton<BTCPayConnectionManager>();
-        serviceCollection.AddSingleton<SyncService>();
         serviceCollection.AddSingleton<LoggingService>();
         serviceCollection.AddSingleton<BTCPayAppServerClient>();
         serviceCollection.AddSingleton<IBTCPayAppHubClient>(provider => provider.GetRequiredService<BTCPayAppServerClient>());
