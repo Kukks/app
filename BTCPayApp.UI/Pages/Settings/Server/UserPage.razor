@@ -28,7 +28,7 @@
                 if (Loading)
                 {
                     <div class="p-3 text-center">
-                        <LoadingIndicator/>
+                        <LoadingIndicator />
                     </div>
                 }
                 else if (!string.IsNullOrEmpty(Error))
@@ -40,7 +40,7 @@
             {
                 var status = UserHelper.GetUserStatus(User);
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
-                    <UserInfo Email="@User.Email" Name="@User.Name" ImageUrl="@User.ImageUrl"/>
+                    <UserInfo Email="@User.Email" Name="@User.Name" ImageUrl="@User.ImageUrl" />
                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
                         @if (User.Roles?.Any() is true)
                         {
@@ -60,10 +60,10 @@
                 if (!string.IsNullOrEmpty(User.InvitationUrl))
                 {
                     <div class="box">
-                        <QrCode Data="@User.InvitationUrl" class="qr-code rounded mb-3"/>
+                        <QrCode Data="@User.InvitationUrl" class="qr-code rounded mb-3" />
                         <div class="form-floating form-group">
                             <TruncateCenter Text="@User.InvitationUrl" Padding="10" Copy="true" Elastic="true"
-                                            class="form-control-plaintext"/>
+                                            class="form-control-plaintext" />
                             <label>Invitation URL</label>
                         </div>
                     </div>
@@ -78,7 +78,7 @@
                                 <button class="btn @buttonClass w-100" type="button" data-bs-toggle="modal" data-bs-target="#ToggleApproveUserModal">
                                     @if (_approving)
                                     {
-                                        <LoadingIndicator/>
+                                        <LoadingIndicator />
                                     }
                                     else
                                     {
@@ -89,12 +89,12 @@
                                               Title="Approve User"
                                               Description="@($"Do you really want to {(User.Approved ? "unapprove" : "approve")} the user {User.Name ?? User.Email}?")"
                                               ButtonClass="@buttonClass"
-                                              OnConfirm="ApproveUser"/>
+                                              OnConfirm="ApproveUser" />
                             }
                             <button class="btn btn-outline-warning w-100" type="button" data-bs-toggle="modal" data-bs-target="#ToggleUserModal">
                                 @if (_toggling)
                                 {
-                                    <LoadingIndicator/>
+                                    <LoadingIndicator />
                                 }
                                 else
                                 {
@@ -105,11 +105,11 @@
                                           Title="@(User.Disabled ? "Enable User" : "Disable User")"
                                           Description="@($"Do you really want to {(User.Disabled ? "enable" : "disable")} the user {User.Name ?? User.Email}?")"
                                           ButtonClass="btn-warning"
-                                          OnConfirm="ToggleUser"/>
+                                          OnConfirm="ToggleUser" />
                             <button class="btn btn-outline-danger w-100" type="button" data-bs-toggle="modal" data-bs-target="#DeleteUserModal">
                                 @if (_removing)
                                 {
-                                    <LoadingIndicator/>
+                                    <LoadingIndicator />
                                 }
                                 else
                                 {
@@ -119,7 +119,7 @@
                             <ConfirmModal id="DeleteUserModal"
                                           Title="Delete User"
                                           Description="@($"Do you really want to delete the user {User.Name ?? User.Email}?")"
-                                          OnConfirm="DeleteUser"/>
+                                          OnConfirm="DeleteUser" />
                         </div>
                     </div>
                 }

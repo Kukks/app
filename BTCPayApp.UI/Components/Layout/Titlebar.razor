@@ -6,13 +6,13 @@
             @if (BackCallback.HasDelegate)
             {
                 <button type="button" class="btn-icon" @onclick="BackCallback">
-                    <Icon Symbol="back"/>
+                    <Icon Symbol="back" />
                 </button>
             }
             else if (!string.IsNullOrEmpty(BackLink) || Back)
             {
                 <a class="btn-icon" href="@(BackLink ?? "#")" onclick="history.back();return false;">
-                    <Icon Symbol="back"/>
+                    <Icon Symbol="back" />
                 </a>
             }
         </div>
@@ -20,7 +20,7 @@
             @ChildContent
         </div>
         <div class="titlebar-end">
-            <SectionOutlet SectionId="End"/>
+            <SectionOutlet SectionId="End" />
         </div>
     </div>
 </section>

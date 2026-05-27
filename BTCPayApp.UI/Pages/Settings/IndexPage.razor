@@ -32,7 +32,7 @@
                         @foreach (var theme in ThemeList)
                         {
                             <button type="button" class="btn-icon @(Model.Theme == theme ? "active" : null)" title="@theme" @onclick="() => SetTheme(theme)">
-                                <Icon Symbol="@($"themes-{theme.ToLower()}")"/>
+                                <Icon Symbol="@($"themes-{theme.ToLower()}")" />
                             </button>
                         }
                     </div>
@@ -48,8 +48,8 @@
                         {
                             <div class="d-inline-flex align-items-center p-0 gap-3">
                                 <button class="d-inline-flex align-items-center btn btn-link text-body dropdown-toggle dropdown-toggle-no-caret p-0 gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <UserInfo Email="@CurrentUser.Email" Name="@CurrentUser.Name" ImageUrl="@CurrentUser.ImageUrl"/>
-                                    <Icon Symbol="caret-down" class="text-muted"/>
+                                    <UserInfo Email="@CurrentUser.Email" Name="@CurrentUser.Name" ImageUrl="@CurrentUser.ImageUrl" />
+                                    <Icon Symbol="caret-down" class="text-muted" />
                                 </button>
                                 <ul class="dropdown-menu">
                                     <li><h6 class="dropdown-header">Switch to mode</h6></li>
@@ -64,11 +64,11 @@
                         }
                         else
                         {
-                            <UserInfo Email="@CurrentUser.Email" Name="@CurrentUser.Name" ImageUrl="@CurrentUser.ImageUrl"/>
+                            <UserInfo Email="@CurrentUser.Email" Name="@CurrentUser.Name" ImageUrl="@CurrentUser.ImageUrl" />
                         }
                     </Authorized>
                     <NotAuthorized>
-                        <UserInfo Email="@CurrentUser.Email" Name="@CurrentUser.Name" ImageUrl="@CurrentUser.ImageUrl"/>
+                        <UserInfo Email="@CurrentUser.Email" Name="@CurrentUser.Name" ImageUrl="@CurrentUser.ImageUrl" />
                         <span class="btn btn-link fw-semibold px-2 py-1 ms-auto" @onclick="SwitchBackToOwner">Switch back</span>
                     </NotAuthorized>
                 </AuthorizeView>
@@ -79,7 +79,7 @@
                                 <div class="modal-header pb-0">
                                     <h1 class="modal-title fs-5">Switch back to admin mode</h1>
                                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
-                                        <Icon Symbol="close"/>
+                                        <Icon Symbol="close" />
                                     </button>
                                 </div>
                                 <div class="modal-body">
@@ -89,15 +89,15 @@
                                     }
                                     <div hidden="@SignInModel.RequireTwoFactor">
                                         <label for="Password" class="form-label">Password</label>
-                                        <InputText @bind-Value="SignInModel.Password" type="password" id="Password" autocomplete="current-password" class="form-control"/>
-                                        <ValidationMessage For="@(() => SignInModel.Password)"/>
+                                        <InputText @bind-Value="SignInModel.Password" type="password" id="Password" autocomplete="current-password" class="form-control" />
+                                        <ValidationMessage For="@(() => SignInModel.Password)" />
                                     </div>
                                     @if (SignInModel.RequireTwoFactor)
                                     {
                                         <div>
                                             <label for="TwoFactorCode" class="form-label">Two Factor Code</label>
-                                            <InputText @bind-Value="SignInModel.TwoFactorCode" type="number" id="TwoFactorCode" autocomplete="one-time-code" class="form-control hide-number-spin"/>
-                                            <ValidationMessage For="@(() => SignInModel.TwoFactorCode)"/>
+                                            <InputText @bind-Value="SignInModel.TwoFactorCode" type="number" id="TwoFactorCode" autocomplete="one-time-code" class="form-control hide-number-spin" />
+                                            <ValidationMessage For="@(() => SignInModel.TwoFactorCode)" />
                                         </div>
                                     }
                                 </div>
@@ -125,16 +125,16 @@
                 <ul class="list-group list-group-flush list-group-links">
                     <li class="list-group-item">
                         <a href="@Routes.Account">
-                            <Icon Symbol="nav-account"/>
+                            <Icon Symbol="nav-account" />
                             <span>Account Details</span>
-                            <Icon Symbol="caret-right"/>
+                            <Icon Symbol="caret-right" />
                         </a>
                     </li>
                     <li class="list-group-item">
                         <a href="@Routes.NotificationSettings">
-                            <Icon Symbol="nav-notifications"/>
+                            <Icon Symbol="nav-notifications" />
                             <span>Notifications</span>
-                            <Icon Symbol="caret-right"/>
+                            <Icon Symbol="caret-right" />
                         </a>
                     </li>
                 </ul>
@@ -151,11 +151,11 @@
                         {
                             <li class="list-group-item">
                                 <a href="@Routes.SelectStore" class="@(CurrentStore != null ? "pt-1 pb-2" : "justify-content-start")">
-                                    <Icon Symbol="nav-store"/>
+                                    <Icon Symbol="nav-store" />
                                     @if (CurrentStore == null)
                                     {
                                         <span>Select Store</span>
-                                        <Icon Symbol="caret-right"/>
+                                        <Icon Symbol="caret-right" />
                                     }
                                     else
                                     {
@@ -172,9 +172,9 @@
                         {
                             <li class="list-group-item">
                                 <a href="@Routes.CreateStore">
-                                    <Icon Symbol="nav-store"/>
+                                    <Icon Symbol="nav-store" />
                                     <span>Create Store</span>
-                                    <Icon Symbol="caret-right"/>
+                                    <Icon Symbol="caret-right" />
                                 </a>
                             </li>
                         }
@@ -183,27 +183,27 @@
                             <AuthorizeView Policy="@Policies.CanViewStoreSettings" Resource="@CurrentStore.Id" Context="store">
                                 <li class="list-group-item">
                                     <a href="@Routes.StorePath(CurrentStore.Id)">
-                                        <Icon Symbol="nav-store-settings"/>
+                                        <Icon Symbol="nav-store-settings" />
                                         <span>Store Settings</span>
-                                        <Icon Symbol="caret-right"/>
+                                        <Icon Symbol="caret-right" />
                                     </a>
                                 </li>
                             </AuthorizeView>
                             <AuthorizeView Policy="@Policies.CanModifyStoreSettings" Resource="@CurrentStore.Id" Context="store">
                                 <li class="list-group-item">
                                     <a href="@Routes.StoreUsersPath(CurrentStore.Id)">
-                                        <Icon Symbol="nav-account"/>
+                                        <Icon Symbol="nav-account" />
                                         <span>Users</span>
-                                        <Icon Symbol="caret-right"/>
+                                        <Icon Symbol="caret-right" />
                                     </a>
                                 </li>
                                 @if (CurrentStore.PosAppId != null)
                                 {
                                     <li class="list-group-item">
                                         <a href="@Routes.PosSettingsPath(CurrentStore.PosAppId)">
-                                            <Icon Symbol="nav-pointofsale"/>
+                                            <Icon Symbol="nav-pointofsale" />
                                             <span>Checkout</span>
-                                            <Icon Symbol="caret-right"/>
+                                            <Icon Symbol="caret-right" />
                                         </a>
                                     </li>
                                 }
@@ -221,23 +221,23 @@
                 <ul class="list-group list-group-flush list-group-links">
                     <li class="list-group-item">
                         <a href="@Routes.Pairing">
-                            <Icon Symbol="nav-transactions"/>
+                            <Icon Symbol="nav-transactions" />
                             <span>Device pairing</span>
-                            <Icon Symbol="caret-right"/>
+                            <Icon Symbol="caret-right" />
                         </a>
                     </li>
                     @*<li class="list-group-item">
                         <a href="@Routes.ChangePasscode">
-                            <Icon Symbol="key"/>
+                            <Icon Symbol="key" />
                             <span>@(HasPasscode ? "Change" : "Set") Passcode</span>
-                            <Icon Symbol="caret-right"/>
+                            <Icon Symbol="caret-right" />
                         </a>
                     </li>*@
                     <li class="list-group-item">
                         <a href="@Routes.ChangePassword">
-                            <Icon Symbol="dots" class="p-2"/>
+                            <Icon Symbol="dots" class="p-2" />
                             <span>Change Password</span>
-                            <Icon Symbol="caret-right"/>
+                            <Icon Symbol="caret-right" />
                         </a>
                     </li>
                 </ul>
@@ -249,9 +249,9 @@
                     <ul class="list-group list-group-flush list-group-links">
                         <li class="list-group-item">
                             <a href="@Routes.ServerUsers">
-                                <Icon Symbol="nav-account"/>
+                                <Icon Symbol="nav-account" />
                                 <span>Users</span>
-                                <Icon Symbol="caret-right"/>
+                                <Icon Symbol="caret-right" />
                             </a>
                         </li>
                     </ul>
@@ -314,7 +314,7 @@
                         <a href="@Routes.AppLogs">
                             <Icon Symbol="nav-server-settings" />
                             <span>App Logs</span>
-                            <Icon Symbol="caret-right"/>
+                            <Icon Symbol="caret-right" />
                         </a>
                     </li>
                 </ul>

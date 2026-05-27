@@ -3,7 +3,7 @@
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @inject IState<UIState> UIState
 
-<img src="@LogoUrl" alt="@LogoText" class="logo"/>
+<img src="@LogoUrl" alt="@LogoText" class="logo" />
 
 @code {
     private AppInstanceInfo? InstanceInfo => UIState.Value.Instance?.Data;

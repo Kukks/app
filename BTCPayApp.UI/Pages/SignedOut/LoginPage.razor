@@ -9,7 +9,7 @@
 <AuthorizeView>
     <NotAuthorized>
         <SectionContent SectionId="_Layout.MainTop">
-            <InstanceLogo/>
+            <InstanceLogo />
             <h1>@GetTitle()</h1>
         </SectionContent>
         <ValidationEditContext @ref="ValidationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" ErrorMessage="@Error" SuccessMessage="@SuccessMessage">
@@ -22,12 +22,12 @@
                         <LoadingIndicator />
                     }
                 </div>
-                <InputText @bind-Value="Model.Uri" @bind-Value:after="() => ResolveInstanceInfo(Model.Uri)" id="Uri" class="form-control" disabled="@UseExistingAccount"/>
+                <InputText @bind-Value="Model.Uri" @bind-Value:after="() => ResolveInstanceInfo(Model.Uri)" id="Uri" class="form-control" disabled="@UseExistingAccount" />
                 <ValidationMessage For="@(() => Model.Uri)" />
             </div>
             <div class="form-group" hidden="@Model.RequireTwoFactor">
                 <label for="Email" class="form-label">Email</label>
-                <InputText @bind-Value="Model.Email" @bind-Value:after="() => ResolveLoginInfo(Model.Email)" type="email" id="Email" class="form-control" disabled="@UseExistingAccount"/>
+                <InputText @bind-Value="Model.Email" @bind-Value:after="() => ResolveLoginInfo(Model.Email)" type="email" id="Email" class="form-control" disabled="@UseExistingAccount" />
                 <ValidationMessage For="@(() => Model.Email)" />
             </div>
             <div class="form-group" hidden="@Model.RequireTwoFactor">
@@ -38,14 +38,14 @@
                         <NavLink href="@GetForgotPasswordUrl()">Forgot password?</NavLink>
                     }
                 </div>
-                <InputText @bind-Value="Model.Password" type="password" id="Password" autocomplete="current-password" class="form-control"/>
-                <ValidationMessage For="@(() => Model.Password)"/>
+                <InputText @bind-Value="Model.Password" type="password" id="Password" autocomplete="current-password" class="form-control" />
+                <ValidationMessage For="@(() => Model.Password)" />
             </div>
             @if (Model.RequireTwoFactor)
             {
                 <div class="form-group">
                     <label for="TwoFactorCode" class="form-label">Two Factor Code</label>
-                    <InputText @bind-Value="Model.TwoFactorCode" type="number" id="TwoFactorCode" autocomplete="one-time-code" class="form-control hide-number-spin"/>
+                    <InputText @bind-Value="Model.TwoFactorCode" type="number" id="TwoFactorCode" autocomplete="one-time-code" class="form-control hide-number-spin" />
                     <ValidationMessage For="@(() => Model.TwoFactorCode)" />
                 </div>
             }
@@ -63,7 +63,7 @@
                 @if (!Model.RequireTwoFactor)
                 {
                     <button type="button" class="btn btn-secondary px-3" data-testid="ScanButton" data-bs-toggle="modal" data-bs-target="#ScanQrCodeModal">
-                        <Icon Symbol="scan-qr"/>
+                        <Icon Symbol="scan-qr" />
                     </button>
                 }
             </div>
@@ -84,10 +84,10 @@
                 <BTCPaySupporters />
             </div>
         </ValidationEditContext>
-        <QrScanModal OnScan="@OnQrCodeScan"/>
+        <QrScanModal OnScan="@OnQrCodeScan" />
     </NotAuthorized>
     <Authorized>
-        <RedirectToIndex/>
+        <RedirectToIndex />
     </Authorized>
 </AuthorizeView>
 

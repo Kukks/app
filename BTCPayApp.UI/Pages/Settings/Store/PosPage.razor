@@ -28,7 +28,7 @@
                 if (Loading)
                 {
                     <div class="p-3 text-center">
-                        <LoadingIndicator/>
+                        <LoadingIndicator />
                     </div>
                 }
                 else if (!string.IsNullOrEmpty(Error))
@@ -46,12 +46,12 @@
                             <fieldset class="box">
                                 <div class="form-group">
                                     <label for="Title" class="form-label">Title</label>
-                                    <InputText @bind-Value="Model.Title" id="Title" class="form-control"/>
+                                    <InputText @bind-Value="Model.Title" id="Title" class="form-control" />
                                     <ValidationMessage For="@(() => Model.Title)" />
                                 </div>
                                 <div class="form-group">
                                     <label for="Currency" class="form-label">Currency</label>
-                                    <InputText @bind-Value="Model.Currency" id="Currency" class="form-control"/>
+                                    <InputText @bind-Value="Model.Currency" id="Currency" class="form-control" />
                                     <ValidationMessage For="@(() => Model.Currency)" />
                                     <div class="form-text">Uses the store's default currency (EUR) if empty.</div>
                                 </div>
@@ -60,9 +60,9 @@
                             <h2>Keypad</h2>
                             <fieldset class="box">
                                 <div class="form-group d-flex align-items-center">
-                                    <InputCheckbox @bind-Value="@Model.ShowItems" id="ShowItems" class="btcpay-toggle me-3"/>
+                                    <InputCheckbox @bind-Value="@Model.ShowItems" id="ShowItems" class="btcpay-toggle me-3" />
                                     <label for="ShowItems" class="form-check-label">Display item selection for keypad</label>
-                                    <ValidationMessage For="@(() => Model.ShowItems)"/>
+                                    <ValidationMessage For="@(() => Model.ShowItems)" />
                                 </div>
                             </fieldset>
 
@@ -70,25 +70,25 @@
                             {
                                 <h2>Products</h2>
                                 <fieldset class="box">
-                                    <AppItemsEditor @bind-Items="@Model.Items" AppId="@AppId" Currency="@Model.Currency"/>
+                                    <AppItemsEditor @bind-Items="@Model.Items" AppId="@AppId" Currency="@Model.Currency" />
                                 </fieldset>
                             }
 
                             <h2>Tips</h2>
                             <fieldset id="tips" class="box">
                                 <div class="form-group mb-0 d-flex align-items-center">
-                                    <InputCheckbox @bind-Value="@Model.EnableTips" id="EnableTips" class="btcpay-toggle me-3" data-bs-toggle="collapse" data-bs-target="#CustomTipsSettings" aria-expanded="@Model.EnableTips" aria-controls="CustomTipsSettings"/>
+                                    <InputCheckbox @bind-Value="@Model.EnableTips" id="EnableTips" class="btcpay-toggle me-3" data-bs-toggle="collapse" data-bs-target="#CustomTipsSettings" aria-expanded="@Model.EnableTips" aria-controls="CustomTipsSettings" />
                                     <label class="form-check-label" for="EnableTips">Enable tips</label>
                                 </div>
                                 <div class="collapse @(Model.EnableTips ? "show" : "")" id="CustomTipsSettings">
                                     <div class="form-group pt-3">
                                         <label for="TipText" class="form-label" data-required>Text to display in the tip input</label>
-                                        <InputText @bind-Value="Model.TipText" id="TipText" class="form-control"/>
+                                        <InputText @bind-Value="Model.TipText" id="TipText" class="form-control" />
                                         <ValidationMessage For="@(() => Model.TipText)" />
                                     </div>
                                     <div class="form-group mb-0">
                                         <label for="CustomTipPercentages" class="form-label">Tip percentage amounts (comma separated)</label>
-                                        <InputText @bind-Value="Model.CustomTipPercentages" id="CustomTipPercentages" class="form-control"/>
+                                        <InputText @bind-Value="Model.CustomTipPercentages" id="CustomTipPercentages" class="form-control" />
                                         <ValidationMessage For="@(() => Model.CustomTipPercentages)" />
                                     </div>
                                 </div>
@@ -97,12 +97,12 @@
                             <h2>Discounts</h2>
                             <fieldset id="discounts" class="box">
                                 <div class="form-group d-flex align-items-center">
-                                    <InputCheckbox @bind-Value="@Model.ShowDiscount" id="ShowDiscount" class="btcpay-toggle me-3"/>
+                                    <InputCheckbox @bind-Value="@Model.ShowDiscount" id="ShowDiscount" class="btcpay-toggle me-3" />
                                     <div>
                                         <label for="ShowDiscount" class="form-check-label">User can input discount in %</label>
                                         <div class="text-muted">Not recommended for customer self-checkout.</div>
                                     </div>
-                                    <ValidationMessage For="@(() => Model.ShowDiscount)"/>
+                                    <ValidationMessage For="@(() => Model.ShowDiscount)" />
                                 </div>
                             </fieldset>
                         </fieldset>
@@ -112,7 +112,7 @@
                                 <button type="submit" class="btn btn-primary w-100" disabled="@(_validationEditContext!.Invalid || Sending)">
                                     @if (Sending)
                                     {
-                                        <LoadingIndicator/>
+                                        <LoadingIndicator />
                                     }
                                     else
                                     {

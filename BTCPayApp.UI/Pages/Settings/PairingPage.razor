@@ -22,7 +22,7 @@
         @if (NeedsEncryptionKey) {
             <SectionContent SectionId="Titlebar.End">
                 <a class="btn-icon" href="@Routes.Settings">
-                    <Icon Symbol="cross"/>
+                    <Icon Symbol="cross" />
                 </a>
             </SectionContent>
         }
@@ -39,13 +39,13 @@
         <div class="box my-4 mx-auto">
             <ValidationEditContext @ref="_validationEditContext" Model="@Model" OnValidSubmit="HandleValidSubmit" ErrorMessage="@_errorMessage">
                 <div hidden="@(_enterManually is true)">
-                    <QRCodeScanner/>
+                    <QRCodeScanner />
                 </div>
                 <div hidden="@(_enterManually is false)">
                     <div class="mb-3">
                         <label for="EncryptionKey" class="form-label">Encryption Key or Recovery Phrase</label>
-                        <InputText @bind-Value="Model.EncryptionKey" id="EncryptionKey" class="form-control flex-grow-1" placeholder="Retrieve from your master device" autocomplete="off"/>
-                        <ValidationMessage For="@(() => Model.EncryptionKey)"/>
+                        <InputText @bind-Value="Model.EncryptionKey" id="EncryptionKey" class="form-control flex-grow-1" placeholder="Retrieve from your master device" autocomplete="off" />
+                        <ValidationMessage For="@(() => Model.EncryptionKey)" />
                     </div>
                 </div>
                 <div id="CtaContainer" class="container d-flex align-items-center justify-content-between" hidden="@(_enterManually is false)">
@@ -54,7 +54,7 @@
             </ValidationEditContext>
         </div>
         <button type="button" class="btn btn-secondary rounded-pill d-flex w-100 align-items-center justify-content-center gap-1 mt-4" @onclick="() => { _enterManually = !_enterManually; }">
-            <Icon Symbol="@(_enterManually is false ? "key" : "scan-qr")"/>
+            <Icon Symbol="@(_enterManually is false ? "key" : "scan-qr")" />
             @(_enterManually is false ? "Enter key manually" : "Scan QR code")
         </button>
     }
@@ -65,10 +65,10 @@
                 <p>
                     Scan this code with your new device to sync your wallet.
                 </p>
-                <QrCode Data="@EncryptionKeyWithDetails" class="qr-code rounded"/>
+                <QrCode Data="@EncryptionKeyWithDetails" class="qr-code rounded" />
                 <div class="box my-4 mx-auto">
                     <div class="form-floating form-group">
-                        <TruncateCenter Text="@Model.EncryptionKey" Padding="10" Copy="true" Elastic="true" class="form-control-plaintext"/>
+                        <TruncateCenter Text="@Model.EncryptionKey" Padding="10" Copy="true" Elastic="true" class="form-control-plaintext" />
                         <label>Your Encryption Key</label>
                     </div>
                 </div>

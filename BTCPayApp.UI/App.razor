@@ -61,18 +61,18 @@
             <Found Context="routeData">
                 <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@layoutType">
                     <NotAuthorized>
-                        <RedirectToIndex/>
+                        <RedirectToIndex />
                     </NotAuthorized>
                     <Authorizing>
                         <IndexPage />
                     </Authorizing>
                 </AuthorizeRouteView>
-                <FocusOnNavigate RouteData="@routeData" Selector="h1"/>
+                <FocusOnNavigate RouteData="@routeData" Selector="h1" />
             </Found>
             <NotFound>
                 <PageTitle>Not found</PageTitle>
                 <LayoutView Layout="@typeof(SimpleLayout)">
-                    <ErrorPage Title="Not found" Message="This page does not exist."/>
+                    <ErrorPage Title="Not found" Message="This page does not exist." />
                 </LayoutView>
             </NotFound>
         </Router>

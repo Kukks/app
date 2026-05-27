@@ -11,7 +11,7 @@
             <AuthorizeView Policy="@Policies.CanCreateInvoice" Resource="StoreId">
                 <li class="nav-item">
                     <NavLink href="@Routes.PointOfSale" Match="NavLinkMatch.All" class="@(HasStore ? CheckoutCssClass() : "nav-link disabled")" aria-disabled="@(HasStore ? null : true)">
-                        <Icon Symbol="nav-keypad"/>
+                        <Icon Symbol="nav-keypad" />
                         <span>Checkout</span>
                     </NavLink>
                 </li>
@@ -19,7 +19,7 @@
             <AuthorizeView Policy="@Policies.CanModifyStoreSettings" Resource="StoreId">
                 <li class="nav-item">
                     <NavLink href="@Routes.Dashboard" Match="NavLinkMatch.All" class="@(HasStore ? HomeCssClass() : "nav-link disabled")" aria-disabled="@(HasStore ? null : true)">
-                        <Icon Symbol="nav-store"/>
+                        <Icon Symbol="nav-store" />
                         <span>Dashboard</span>
                     </NavLink>
                 </li>
@@ -27,14 +27,14 @@
             <AuthorizeView Policy="@Policies.CanViewInvoices" Resource="StoreId">
                 <li class="nav-item">
                     <NavLink href="@Routes.Invoices" Match="NavLinkMatch.Prefix" class="@(HasStore ? "nav-link" : "nav-link disabled")" aria-disabled="@(HasStore ? null : true)">
-                        <Icon Symbol="nav-invoices"/>
+                        <Icon Symbol="nav-invoices" />
                         <span>Invoices</span>
                     </NavLink>
                 </li>
             </AuthorizeView>
             <li class="nav-item">
                 <NavLink href="@Routes.Settings" Match="NavLinkMatch.Prefix" class="nav-link">
-                    <Icon Symbol="settings"/>
+                    <Icon Symbol="settings" />
                     <span>Settings</span>
                 </NavLink>
             </li>

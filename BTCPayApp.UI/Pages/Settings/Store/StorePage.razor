@@ -44,7 +44,7 @@
                 if (Loading)
                 {
                     <div class="p-3 text-center">
-                        <LoadingIndicator/>
+                        <LoadingIndicator />
                     </div>
                 }
                 else if (!string.IsNullOrEmpty(Error))
@@ -55,18 +55,18 @@
             else if (_canView is true)
             {
                 <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" SuccessMessage="@_successMessage" ErrorMessage="@Error">
-                    <DataAnnotationsValidator/>
+                    <DataAnnotationsValidator />
                         <fieldset disabled="@(_canModify is not true)">
                             <fieldset class="box">
                                 <div class="form-group">
                                     <label for="Name" class="form-label">Name</label>
-                                    <InputText @bind-Value="Model.Name" id="Name" class="form-control"/>
-                                    <ValidationMessage For="@(() => Model.Name)"/>
+                                    <InputText @bind-Value="Model.Name" id="Name" class="form-control" />
+                                    <ValidationMessage For="@(() => Model.Name)" />
                                 </div>
                                 <div class="form-group">
                                     <label for="Website" class="form-label">Website</label>
-                                    <InputText @bind-Value="Model.Website" id="Website" class="form-control"/>
-                                    <ValidationMessage For="@(() => Model.Website)"/>
+                                    <InputText @bind-Value="Model.Website" id="Website" class="form-control" />
+                                    <ValidationMessage For="@(() => Model.Website)" />
                                 </div>
                             </fieldset>
 
@@ -75,10 +75,10 @@
                                 <div class="form-group">
                                     <label for="BrandColor" class="form-label">Brand Color</label>
                                     <div class="input-group">
-                                        <InputText @bind-Value="Model.BrandColor" class="form-control form-control-color flex-grow-0" id="BrandColor" type="color" style="width:3rem" aria-describedby="BrandColorValue"/>
-                                        <InputText @bind-Value="Model.BrandColor" class="form-control form-control-color flex-grow-0 font-monospace" pattern="^#[0-9a-fA-F]{6}$" style="width:5.5rem;font-size:0.9rem"/>
+                                        <InputText @bind-Value="Model.BrandColor" class="form-control form-control-color flex-grow-0" id="BrandColor" type="color" style="width:3rem" aria-describedby="BrandColorValue" />
+                                        <InputText @bind-Value="Model.BrandColor" class="form-control form-control-color flex-grow-0 font-monospace" pattern="^#[0-9a-fA-F]{6}$" style="width:5.5rem;font-size:0.9rem" />
                                     </div>
-                                    <ValidationMessage For="@(() => Model.BrandColor)"/>
+                                    <ValidationMessage For="@(() => Model.BrandColor)" />
                                 </div>
                                 <div class="d-flex align-items-center justify-content-between gap-2">
                                     <label for="Logo" class="form-label">Logo</label>
@@ -90,10 +90,10 @@
                                     }
                                 </div>
                                 <div class="d-flex align-items-center gap-3">
-                                    <InputFile OnChange="LoadLogo" @key="@_inputFileId" id="Logo" class="form-control"/>
+                                    <InputFile OnChange="LoadLogo" @key="@_inputFileId" id="Logo" class="form-control" />
                                     @if (!string.IsNullOrEmpty(Model.LogoUrl))
                                     {
-                                        <img src="@Model.LogoUrl" alt="Logo" class="logo"/>
+                                        <img src="@Model.LogoUrl" alt="Logo" class="logo" />
                                     }
                                 </div>
                             </fieldset>
@@ -102,91 +102,91 @@
                             <fieldset class="box">
                                 <div class="form-group">
                                     <label for="DefaultCurrency" class="form-label" data-required>Default Currency</label>
-                                    <InputText @bind-Value="Model.DefaultCurrency" id="DefaultCurrency" class="form-control"/>
-                                    <ValidationMessage For="@(() => Model.DefaultCurrency)"/>
+                                    <InputText @bind-Value="Model.DefaultCurrency" id="DefaultCurrency" class="form-control" />
+                                    <ValidationMessage For="@(() => Model.DefaultCurrency)" />
                                 </div>
                                 @*
                                 <div class="form-group d-flex align-items-center">
-                                    <InputCheckbox @bind-Value="@Model.AnyoneCanCreateInvoice" id="AnyoneCanCreateInvoice" class="btcpay-toggle me-3"/>
+                                    <InputCheckbox @bind-Value="@Model.AnyoneCanCreateInvoice" id="AnyoneCanCreateInvoice" class="btcpay-toggle me-3" />
                                     <div>
                                         <label for="AnyoneCanCreateInvoice" class="form-check-label me-1">Allow anyone to create invoice</label>
                                         <a href="https://docs.btcpayserver.org/FAQ/Stores/#allow-anyone-to-create-invoice" target="_blank" rel="noreferrer noopener" title="More information...">
-                                            <Icon Symbol="info"/>
+                                            <Icon Symbol="info" />
                                         </a>
                                     </div>
-                                    <ValidationMessage For="@(() => Model.AnyoneCanCreateInvoice)"/>
+                                    <ValidationMessage For="@(() => Model.AnyoneCanCreateInvoice)" />
                                 </div>
                                 *@
                                 <div class="form-group">
                                     <label for="NetworkFeeMode" class="form-label me-1">Invoice expires if the full amount has not been paid after …</label>
                                     <a href="https://docs.btcpayserver.org/FAQ/Stores/#add-network-fee-to-invoice-vary-with-mining-fees" target="_blank" rel="noreferrer noopener" title="More information...">
-                                        <Icon Symbol="info"/>
+                                        <Icon Symbol="info" />
                                     </a>
                                     <InputSelect @bind-Value="Model.NetworkFeeMode" id="NetworkFeeMode" class="form-select w-auto">
                                         <option value="@NetworkFeeMode.MultiplePaymentsOnly">... only if the customer makes more than one payment for the invoice</option>
                                         <option value="@NetworkFeeMode.Always">... on every payment</option>
                                         <option value="@NetworkFeeMode.Never">Never add network fee</option>
                                     </InputSelect>
-                                    <ValidationMessage For="@(() => Model.NetworkFeeMode)"/>
+                                    <ValidationMessage For="@(() => Model.NetworkFeeMode)" />
                                 </div>
                                 <div class="form-group">
                                     <label for="InvoiceExpiration" class="form-label me-1">Invoice expires if the full amount has not been paid after …</label>
                                     <a href="https://docs.btcpayserver.org/FAQ/Stores/#invoice-expires-if-the-full-amount-has-not-been-paid-after-minutes" target="_blank" rel="noreferrer noopener" title="More information...">
-                                        <Icon Symbol="info"/>
+                                        <Icon Symbol="info" />
                                     </a>
                                     <div class="input-group">
-                                        <InputNumber @bind-Value="Model.InvoiceExpiration" id="InvoiceExpiration" class="form-control" inputmode="numeric" style="max-width:12ch;"/>
+                                        <InputNumber @bind-Value="Model.InvoiceExpiration" id="InvoiceExpiration" class="form-control" inputmode="numeric" style="max-width:12ch;" />
                                         <span class="input-group-text">minutes</span>
                                     </div>
-                                    <ValidationMessage For="@(() => Model.InvoiceExpiration)"/>
+                                    <ValidationMessage For="@(() => Model.InvoiceExpiration)" />
                                 </div>
                                 <div class="form-group">
                                     <label for="PaymentTolerance" class="form-label me-1">Consider the invoice paid even if the paid amount is ... % less than expected</label>
                                     <a href="https://docs.btcpayserver.org/FAQ/Stores/#consider-the-invoice-paid-even-if-the-paid-amount-is-less-than-expected" target="_blank" rel="noreferrer noopener" title="More information...">
-                                        <Icon Symbol="info"/>
+                                        <Icon Symbol="info" />
                                     </a>
                                     <div class="input-group">
-                                        <InputNumber @bind-Value="Model.PaymentTolerance" id="PaymentTolerance" class="form-control" inputmode="decimal" style="max-width:12ch;"/>
+                                        <InputNumber @bind-Value="Model.PaymentTolerance" id="PaymentTolerance" class="form-control" inputmode="decimal" style="max-width:12ch;" />
                                         <span class="input-group-text">percent</span>
                                     </div>
-                                    <ValidationMessage For="@(() => Model.PaymentTolerance)"/>
+                                    <ValidationMessage For="@(() => Model.PaymentTolerance)" />
                                 </div>
                             </fieldset>
 
                             <h2>Checkout</h2>
                             <fieldset class="box">
                                 <div class="form-group d-flex align-items-center">
-                                    <InputCheckbox @bind-Value="@Model.CelebratePayment" id="CelebratePayment" class="btcpay-toggle me-3"/>
+                                    <InputCheckbox @bind-Value="@Model.CelebratePayment" id="CelebratePayment" class="btcpay-toggle me-3" />
                                     <label for="CelebratePayment" class="form-check-label">Celebrate payment with confetti</label>
-                                    <ValidationMessage For="@(() => Model.CelebratePayment)"/>
+                                    <ValidationMessage For="@(() => Model.CelebratePayment)" />
                                 </div>
                                 <div class="form-group d-flex align-items-center">
-                                    <InputCheckbox @bind-Value="@Model.PlaySoundOnPayment" id="PlaySoundOnPayment" class="btcpay-toggle me-3"/>
+                                    <InputCheckbox @bind-Value="@Model.PlaySoundOnPayment" id="PlaySoundOnPayment" class="btcpay-toggle me-3" />
                                     <label for="PlaySoundOnPayment" class="form-check-label">Enable sounds on checkout page</label>
-                                    <ValidationMessage For="@(() => Model.PlaySoundOnPayment)"/>
+                                    <ValidationMessage For="@(() => Model.PlaySoundOnPayment)" />
                                 </div>
                                 <div class="form-group d-flex align-items-center">
-                                    <InputCheckbox @bind-Value="@Model.ShowStoreHeader" id="ShowStoreHeader" class="btcpay-toggle me-3"/>
+                                    <InputCheckbox @bind-Value="@Model.ShowStoreHeader" id="ShowStoreHeader" class="btcpay-toggle me-3" />
                                     <label for="ShowStoreHeader" class="form-check-label">Show the store header</label>
-                                    <ValidationMessage For="@(() => Model.ShowStoreHeader)"/>
+                                    <ValidationMessage For="@(() => Model.ShowStoreHeader)" />
                                 </div>
                                 <div class="form-group d-flex align-items-center">
-                                    <InputCheckbox @bind-Value="@Model.ShowPayInWalletButton" id="ShowPayInWalletButton" class="btcpay-toggle me-3"/>
+                                    <InputCheckbox @bind-Value="@Model.ShowPayInWalletButton" id="ShowPayInWalletButton" class="btcpay-toggle me-3" />
                                     <label for="ShowPayInWalletButton" class="form-check-label">Show "Pay in wallet" button</label>
-                                    <ValidationMessage For="@(() => Model.ShowPayInWalletButton)"/>
+                                    <ValidationMessage For="@(() => Model.ShowPayInWalletButton)" />
                                 </div>
                                 <div class="form-group d-flex align-items-center">
-                                    <InputCheckbox @bind-Value="@Model.OnChainWithLnInvoiceFallback" id="OnChainWithLnInvoiceFallback" class="btcpay-toggle me-3"/>
+                                    <InputCheckbox @bind-Value="@Model.OnChainWithLnInvoiceFallback" id="OnChainWithLnInvoiceFallback" class="btcpay-toggle me-3" />
                                     <label for="OnChainWithLnInvoiceFallback" class="form-check-label me-1">Unify on-chain and lightning payment URL/QR code</label>
                                     <a href="https://bitcoinqr.dev/" target="_blank" rel="noreferrer noopener">
-                                        <Icon Symbol="info"/>
+                                        <Icon Symbol="info" />
                                     </a>
-                                    <ValidationMessage For="@(() => Model.OnChainWithLnInvoiceFallback)"/>
+                                    <ValidationMessage For="@(() => Model.OnChainWithLnInvoiceFallback)" />
                                 </div>
                                 <div class="form-group d-flex align-items-center">
-                                    <InputCheckbox @bind-Value="@Model.LightningAmountInSatoshi" id="LightningAmountInSatoshi" class="btcpay-toggle me-3"/>
+                                    <InputCheckbox @bind-Value="@Model.LightningAmountInSatoshi" id="LightningAmountInSatoshi" class="btcpay-toggle me-3" />
                                     <label for="LightningAmountInSatoshi" class="form-check-label">Display Lightning payment amounts in Satoshis</label>
-                                    <ValidationMessage For="@(() => Model.LightningAmountInSatoshi)"/>
+                                    <ValidationMessage For="@(() => Model.LightningAmountInSatoshi)" />
                                 </div>
                             </fieldset>
                         </fieldset>
@@ -196,7 +196,7 @@
                                 <button type="submit" class="btn btn-primary w-100" disabled="@(_validationEditContext!.Invalid || Sending)">
                                     @if (Sending)
                                     {
-                                        <LoadingIndicator/>
+                                        <LoadingIndicator />
                                     }
                                     else
                                     {

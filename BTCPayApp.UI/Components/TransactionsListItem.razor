@@ -4,7 +4,7 @@
 <div>
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2" @onclick="() => _showDetails = !_showDetails">
         <span class="flex-grow-1 text-muted">
-            <DateDisplay DateTimeOffset="@Transaction.Timestamp"/>
+            <DateDisplay DateTimeOffset="@Transaction.Timestamp" />
         </span>
         <AmountDisplay Sats="Transaction.Value.MilliSatoshi / 1000" Rate="@Rate" Currency="@Currency" OnChangeDisplayCurrency="ToggleDisplayCurrency" class="@AmountClass" />
         <span class="w-100px ms-auto text-end">
@@ -15,14 +15,14 @@
         <div class="pt-3">
             <div class="form-floating">
                 <span class="truncate-center form-control-plaintext" style="padding-right:3px;padding-left:3px;padding-bottom:0;font-weight: var(--btcpay-font-weight-semibold);">
-                    <DateDisplay DateTimeOffset="@Transaction.Timestamp" Format="DateDisplay.DateDisplayFormat.Localized"/>
+                    <DateDisplay DateTimeOffset="@Transaction.Timestamp" Format="DateDisplay.DateDisplayFormat.Localized" />
                 </span>
                 <label>Date</label>
             </div>
             @if (Transaction is { PaymentMethod: TransactionPaymentMethod.Onchain, OnchainTransaction: not null })
             {
                 <div class="form-floating">
-                    <TruncateCenter Text="@Transaction.OnchainTransaction.TransactionId" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
+                    <TruncateCenter Text="@Transaction.OnchainTransaction.TransactionId" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext" />
                     <label>Transaction ID</label>
                 </div>
             }
@@ -31,14 +31,14 @@
                 if (Transaction.LightningPayment.PaymentRequest != null)
                 {
                     <div class="form-floating">
-                        <TruncateCenter Text="@Transaction.LightningPayment.PaymentRequest.ToString()" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
+                        <TruncateCenter Text="@Transaction.LightningPayment.PaymentRequest.ToString()" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext" />
                         <label>Payment Request</label>
                     </div>
                 }
                 if (Transaction.LightningPayment.Preimage != null)
                 {
                     <div class="form-floating">
-                        <TruncateCenter Text="@Transaction.LightningPayment.Preimage" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
+                        <TruncateCenter Text="@Transaction.LightningPayment.Preimage" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext" />
                         <label>Preimage</label>
                     </div>
                 }

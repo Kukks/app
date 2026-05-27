@@ -13,14 +13,14 @@
     <Titlebar BackLink="@BackUrl">
         <SectionContent SectionId="Titlebar.End">
             <a class="btn-icon" href="@Routes.Index">
-                <Icon Symbol="cross"/>
+                <Icon Symbol="cross" />
             </a>
         </SectionContent>
     </Titlebar>
 </SectionContent>
 
 <SectionContent SectionId="_Layout.MainTop">
-    <InstanceLogo/>
+    <InstanceLogo />
     <h1>Create a new store</h1>
     @if (!string.IsNullOrEmpty(_errorMessage))
     {
@@ -33,7 +33,7 @@
         @if (_loading)
         {
             <div class="p-3 text-center">
-                <LoadingIndicator/>
+                <LoadingIndicator />
             </div>
         }
         else if (_data is not null)
@@ -42,13 +42,13 @@
             <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" FormName="CreateStore" method="post">
                 <div class="form-group">
                     <label for="Name" class="form-label" data-required>Name</label>
-                    <InputText @bind-Value="Model.Name" id="Name" class="form-control"/>
-                    <ValidationMessage For="@(() => Model.Name)"/>
+                    <InputText @bind-Value="Model.Name" id="Name" class="form-control" />
+                    <ValidationMessage For="@(() => Model.Name)" />
                 </div>
                 <div class="form-group">
                     <label for="DefaultCurrency" class="form-label" data-required>Default Currency</label>
-                    <InputText @bind-Value="Model.DefaultCurrency" id="DefaultCurrency" class="form-control"/>
-                    <ValidationMessage For="@(() => Model.DefaultCurrency)"/>
+                    <InputText @bind-Value="Model.DefaultCurrency" id="DefaultCurrency" class="form-control" />
+                    <ValidationMessage For="@(() => Model.DefaultCurrency)" />
                 </div>
                 @if (_data.Exchanges?.Any() is true)
                 {
@@ -61,7 +61,7 @@
                             }
                         </InputSelect>
                         <div class="form-text mt-2 only-for-js">The recommended price source gets chosen based on the default currency.</div>
-                        <ValidationMessage For="@(() => Model.PreferredExchange)"/>
+                        <ValidationMessage For="@(() => Model.PreferredExchange)" />
                     </div>
                 }
                 <div id="CtaContainer" class="container d-flex align-items-center justify-content-between">

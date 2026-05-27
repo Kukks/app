@@ -22,7 +22,7 @@
     {
         <AuthorizeView Policy="@Policies.CanViewInvoices" Resource="@StoreInfo.Id">
             <Authorized>
-                <InvoiceList Invoices="Invoices" Loading="Loading" Error="@Error"/>
+                <InvoiceList Invoices="Invoices" Loading="Loading" Error="@Error" />
             </Authorized>
             <NotAuthorized>
                 <Alert Type="danger">Unauthorized.</Alert>
@@ -32,7 +32,7 @@
     else
     {
         <div class="p-3 text-center">
-            <LoadingIndicator/>
+            <LoadingIndicator />
         </div>
     }
 </section>
