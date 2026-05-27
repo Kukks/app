@@ -56,7 +56,18 @@ jobs:
       # Run tests
       - name: Run tests
         run: |
-          dotnet test -c Release -v n --logger "console;verbosity=normal" BTCPayApp.Tests
+          dotnet test -c Release -v n --logger "console;verbosity=normal" BTCPayApp.Tests -bl:test.binlog -p:EmitCompilerGeneratedFiles=true
+      # TEMP diagnostic: capture the broken Razor codegen + build inputs from the runner (revert after).
+      - name: Upload Razor diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: razor-diagnostics
+          path: |
+            test.binlog
+            BTCPayApp.UI/obj/**/*.cs
+            BTCPayApp.UI/obj/**/*.editorconfig
+          if-no-files-found: warn
 
   build-android:
     runs-on: windows-latest
