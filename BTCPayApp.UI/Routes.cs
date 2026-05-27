@@ -34,7 +34,6 @@ public static class Routes
     public const string NotificationSettings = "/settings/notifications";
     public const string Account = "/settings/account";
     public const string ChangePassword = "/settings/password";
-    public const string Pairing = "/settings/pairing";
     public const string ServerUsers = "/settings/server/users";
     public const string ServerUser = "/settings/server/users/{UserId}";
     public const string InviteServerUser = "/settings/server/invite-user";

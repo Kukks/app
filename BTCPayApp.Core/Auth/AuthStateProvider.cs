@@ -31,7 +31,6 @@ public class AuthStateProvider(
     public AppUserStoreInfo? CurrentStore => string.IsNullOrEmpty(_currentStoreId) ? null : GetUserStore(_currentStoreId);
     public AsyncEventHandler<AppUserStoreInfo?>? OnStoreChanged { get; set; }
     public AsyncEventHandler<AppUserInfo?>? OnUserInfoChanged { get; set; }
-    public AsyncEventHandler<string>? OnEncryptionKeyChanged { get; set; }
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
@@ -61,17 +60,6 @@ public class AuthStateProvider(
             throw new ArgumentException("No base URI present or provided.", nameof(baseUri));
         token ??= Account?.ModeToken ?? Account?.OwnerToken;
         return new BTCPayAppClient(baseUri ?? Account!.BaseUri, token, clientFactory.CreateClient());
-    }
-
-    public async Task<string?> GetEncryptionKey()
-    {
-        return await secureProvider.Get<string>("encryptionKey");
-    }
-
-    public async Task SetEncryptionKey(string value)
-    {
-        await secureProvider.Set("encryptionKey", value);
-        OnEncryptionKeyChanged?.Invoke(this, value);
     }
 
     public override async Task<AuthenticationState> GetAuthenticationStateAsync()
@@ -293,21 +281,6 @@ public class AuthStateProvider(
             }
             var account = new BTCPayAccount(serverUrl, email, response.AccessToken);
             await SetAccount(account);
-            return new FormResult(true);
-        }
-        catch (Exception e)
-        {
-            return new FormResult(false, e.Message);
-        }
-    }
-
-    public async Task<FormResult> AddAccountWithEncyptionKey(string serverUrl, string email, string key)
-    {
-        try
-        {
-            var account = new BTCPayAccount(serverUrl, email);
-            await SetAccount(account);
-            await SetEncryptionKey(key);
             return new FormResult(true);
         }
         catch (Exception e)

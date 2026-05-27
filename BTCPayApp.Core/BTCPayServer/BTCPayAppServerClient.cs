@@ -11,7 +11,6 @@ public class BTCPayAppServerClient(ILogger<BTCPayAppServerClient> _logger)
     public event AsyncEventHandler<TransactionDetectedRequest>? OnTransactionDetected;
     public event AsyncEventHandler<string>? OnNotifyNetwork;
     public event AsyncEventHandler<string>? OnServerNodeInfo;
-    public event AsyncEventHandler<long?>? OnMasterUpdated;
     public event AsyncEventHandler<ServerEvent>? OnNotifyServerEvent;
 
     public async Task NotifyServerEvent(ServerEvent ev)
@@ -47,12 +46,5 @@ public class BTCPayAppServerClient(ILogger<BTCPayAppServerClient> _logger)
         _logger.LogInformation("NewBlock: {Block}", block);
         if (OnNewBlock is null) return;
         await OnNewBlock.Invoke(this, block);
-    }
-
-    public Task MasterUpdated(long? deviceIdentifier)
-    {
-        _logger.LogInformation("MasterUpdated: {DeviceIdentifier}", deviceIdentifier);
-        OnMasterUpdated?.Invoke(this, deviceIdentifier);
-        return Task.CompletedTask;
     }
 }

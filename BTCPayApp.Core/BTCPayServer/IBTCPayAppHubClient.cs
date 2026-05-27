@@ -12,13 +12,11 @@ public interface IBTCPayAppHubClient
     Task NotifyServerNode(string nodeInfo);
     Task TransactionDetected(TransactionDetectedRequest request);
     Task NewBlock(string block);
-    Task MasterUpdated(long? deviceIdentifier);
 }
 
 //methods available on the hub in the server
 public interface IBTCPayAppHubServer
 {
-    Task<bool> DeviceMasterSignal(long deviceIdentifier, bool active);
     Task<Dictionary<string,string>> Pair(PairRequest request);
     Task<AppHandshakeResponse> Handshake(AppHandshake request);
     Task<bool> BroadcastTransaction(string tx);
@@ -30,7 +28,6 @@ public interface IBTCPayAppHubServer
     Task<string> UpdatePsbt(string[] identifiers, string psbt);
     Task<Dictionary<string, CoinResponse[]>> GetUTXOs(string[] identifiers);
     Task<Dictionary<string, TxResp[]>> GetTransactions(string[] identifiers);
-    Task<long?> GetCurrentMaster();
 }
 
 public class ServerEvent

@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace BTCPayApp.Core.BTCPayServer;
 
@@ -6,12 +6,8 @@ namespace BTCPayApp.Core.BTCPayServer;
 public enum BTCPayConnectionState
 {
     Init,
-    Disconnected,
     WaitingForAuth,
     Connecting,
-    Syncing,
-    WaitingForEncryptionKey,
-    ConnectedAsPrimary,
-    ConnectedAsSecondary,
-    ConnectedFinishedInitialSync
+    Connected,
+    Disconnected
 }

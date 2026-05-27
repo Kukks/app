@@ -64,14 +64,17 @@ public class StateMiddleware(
         {
             dispatcher.Dispatch(new RootState.ConnectionStateUpdatedAction(btcPayConnectionManager.ConnectionState));
 
-            // refresh after returning from the background
-            if (btcPayConnectionManager.ConnectionState == BTCPayConnectionState.ConnectedFinishedInitialSync && !_previouslyConnected)
+            if (btcPayConnectionManager.ConnectionState == BTCPayConnectionState.Connected)
             {
-                _previouslyConnected = true;
-            }
-            else if (btcPayConnectionManager.ConnectionState == BTCPayConnectionState.Syncing && _previouslyConnected && accountManager.CurrentStore is { } store)
-            {
-                dispatcher.Dispatch(new StoreState.RefreshStore(store));
+                // refresh after returning from the background
+                if (!_previouslyConnected)
+                {
+                    _previouslyConnected = true;
+                }
+                else if (accountManager.CurrentStore is { } store)
+                {
+                    dispatcher.Dispatch(new StoreState.RefreshStore(store));
+                }
             }
             return Task.CompletedTask;
         };

@@ -14,7 +14,6 @@
 @inject ConfigProvider ConfigProvider
 @inject IAccountManager AccountManager
 @inject IState<UserState> UserState
-@inject BTCPayConnectionManager ConnectionManager
 @inject IJSRuntime JS
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
@@ -141,10 +140,8 @@
             </div>
         </AuthorizeView>
 
-        @if (!NeedsEncryptionKey)
-        {
-            <AuthorizeView Policy="@AppPolicies.CanModifySettings">
-                <h2>Store</h2>
+        <AuthorizeView Policy="@AppPolicies.CanModifySettings">
+            <h2>Store</h2>
                 <div class="box">
                     <ul class="list-group list-group-flush list-group-links">
                         @if (CurrentUser?.Stores?.Count() > 0 || CurrentStore == null)
@@ -213,19 +210,10 @@
                 </div>
             </AuthorizeView>
 
-        }
-
         <AuthorizeView Policy="@AppPolicies.CanModifySettings">
             <h2>Security</h2>
             <div class="box">
                 <ul class="list-group list-group-flush list-group-links">
-                    <li class="list-group-item">
-                        <a href="@Routes.Pairing">
-                            <Icon Symbol="nav-transactions" />
-                            <span>Device pairing</span>
-                            <Icon Symbol="caret-right" />
-                        </a>
-                    </li>
                     @*<li class="list-group-item">
                         <a href="@Routes.ChangePasscode">
                             <Icon Symbol="key" />
@@ -263,25 +251,16 @@
                 <ul class="list-group list-group-flush list-group-links">
                     <li class="list-group-item">
                         <div class="justify-content-start">
-                            <span class="m-2 me-3 btcpay-status btcpay-status--@(State.Value.ConnectionState switch { BTCPayConnectionState.ConnectedAsPrimary or BTCPayConnectionState.ConnectedAsSecondary or BTCPayConnectionState.ConnectedFinishedInitialSync => "enabled", BTCPayConnectionState.Disconnected => "disabled", _ => "pending" })"></span>
+                            <span class="m-2 me-3 btcpay-status btcpay-status--@(State.Value.ConnectionState switch { BTCPayConnectionState.Connected => "enabled", BTCPayConnectionState.Disconnected => "disabled", _ => "pending" })"></span>
                             <span>
                                 Hub:
                                 @(State.Value.ConnectionState switch
                                 {
-                                    BTCPayConnectionState.ConnectedAsPrimary => "Connected as primary device",
-                                    BTCPayConnectionState.ConnectedAsSecondary => "Connected as secondary device",
-                                    BTCPayConnectionState.ConnectedFinishedInitialSync => "Connected, initial sync finished",
+                                    BTCPayConnectionState.Connected => "Connected",
                                     BTCPayConnectionState.WaitingForAuth => "Waiting for authentication",
-                                    BTCPayConnectionState.WaitingForEncryptionKey => "Waiting for encryption key",
                                     _ => State.Value.ConnectionState.ToString()
                                 })
                             </span>
-                            @if (State.Value.ConnectionState == BTCPayConnectionState.ConnectedAsPrimary)
-                            {
-                                <button type="button" class="btn btn-link fw-semibold px-2 py-1 ms-auto" @onclick="SwitchToSecondary">
-                                    <span>Switch to Secondary</span>
-                                </button>
-                            }
                         </div>
                         @if (InstanceInfo != null)
                         {
@@ -322,15 +301,6 @@
         </AuthorizeView>
         <h2>Logout</h2>
         <div class="box">
-            @switch (State.Value.ConnectionState)
-            {
-                case BTCPayConnectionState.ConnectedAsPrimary:
-                    <p>This device is currently connected as the primary device for communication with the BTCPay Server.</p>
-                    break;
-                case BTCPayConnectionState.ConnectedAsSecondary:
-                    <p>This device is currently connected as an additional device for communication with the BTCPay Server.</p>
-                    break;
-            }
             <button class="btn btn-outline-danger w-100 mt-2" type="button" @onclick="Logout">Logout</button>
         </div>
     </section>
@@ -346,7 +316,6 @@
     private AppUserStoreInfo? CurrentStore => AccountManager.CurrentStore;
     private AppInstanceInfo? InstanceInfo => UiState.Value.Instance?.Data;
     private AppUserInfo? CurrentUser => UserState.Value.Info?.Data;
-    private bool NeedsEncryptionKey => ConnectionManager.ConnectionState == BTCPayConnectionState.WaitingForEncryptionKey;
     private bool _sending;
     private string? _errorMessage;
     private long _deviceId;
@@ -390,12 +359,6 @@
     {
         Model.Theme = theme;
         Dispatcher.Dispatch(new UIState.ApplyUserTheme(Model.Theme));
-    }
-
-    private async Task SwitchToSecondary()
-    {
-        if (!await AccountManager.IsAuthorized(AppPolicies.CanModifySettings)) return;
-        _ = ConnectionManager.SwitchToSecondary();
     }
 
     private async Task SwitchMode(string mode)

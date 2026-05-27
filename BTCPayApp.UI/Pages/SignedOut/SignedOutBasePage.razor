@@ -98,10 +98,6 @@
         {
             return await HandlePOSQRLoginCode(urlOrLoginCode);
         }
-        if (urlOrLoginCode.Contains(Constants.EncryptionKeySeparator))
-        {
-            return await HandleEncryptionKey(urlOrLoginCode);
-        }
         if (urlOrLoginCode.Contains(Constants.InviteSeparator))
         {
             return await HandleInviteUrl(urlOrLoginCode);
@@ -201,35 +197,6 @@
         return false;  
     }
 
-    private async Task<bool> HandleEncryptionKey(string code)
-    {
-        var parts = code.Split(Constants.EncryptionKeySeparator);
-        if (parts.Length == 3 && Uri.TryCreate(parts[1], UriKind.Absolute, out _) && MailAddress.TryCreate(parts[2], out _))
-        {
-            ErrorMessage = null;
-            Sending = false;
-            StateHasChanged();
-            var result = await AccountManager.AddAccountWithEncyptionKey(parts[1], parts[2], parts.First());
-            if (result.Succeeded)
-            {
-                var param = new Dictionary<string, object?> { { "useExistingAccount", true } };
-                var login = NavigationManager.GetUriWithQueryParameters(Routes.Login, param);
-                NavigationManager.NavigateTo(login, RelativePath.StartsWith(Routes.Login));
-                return true;
-            }
-
-            ErrorMessage = result.Messages?.Contains("Failed") is false
-                ? string.Join(",", result.Messages)
-                : "Invalid login attempt.";
-        }
-        else
-        {
-            ErrorMessage = "Invalid pairing code";
-        }
-        StateHasChanged();
-        return false;
-    }
-
     private async Task ConnectionStateChanged(object? sender, (BTCPayConnectionState Old, BTCPayConnectionState New) e)
     {
         await RedirectForAuthState();
@@ -246,14 +213,11 @@
             var current = NavigationManager.Uri[(NavigationManager.BaseUri.Length - 1)..];
             switch (ConnectionManager.ConnectionState)
             {
-                case BTCPayConnectionState.Connecting or BTCPayConnectionState.Syncing:
+                case BTCPayConnectionState.Connecting:
                     {
                         route = Routes.Index;
                         break;
                     }
-                case BTCPayConnectionState.WaitingForEncryptionKey:
-                    route = Routes.Pairing;
-                    break;
                 default:
                     {
                         if (storeId == null)
@@ -294,11 +258,6 @@
             var parts = str.Split(Constants.LoginCodeSeparator);
             url = parts.Length == 3 ? parts[1] : null;
         }
-        if (str.Contains(Constants.EncryptionKeySeparator))
-        {
-            var parts = str.Split(Constants.EncryptionKeySeparator);
-            url = parts.Length == 3 ? parts[1] : null;
-        }
         if (str.Contains(Constants.InviteSeparator))
         {
             url = str.Split(Constants.InviteSeparator).First();
@@ -307,6 +266,4 @@
 
         return url.Contains("://", StringComparison.OrdinalIgnoreCase) ? url : $"https://{url}";
     }
-
-    private string RelativePath => "/" + NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
 }

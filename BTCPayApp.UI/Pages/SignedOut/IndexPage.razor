@@ -18,7 +18,7 @@
     {
         await base.OnInitializedAsync();
 
-        if (ConnectionManager.ConnectionState is BTCPayConnectionState.Connecting or BTCPayConnectionState.Syncing)
+        if (ConnectionManager.ConnectionState is BTCPayConnectionState.Connecting)
             LoadingState = ConnectionManager.ConnectionState.ToString();
 
         await RedirectForAuthState();
