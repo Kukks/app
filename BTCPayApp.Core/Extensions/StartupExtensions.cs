@@ -9,6 +9,16 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using NArk.Abstractions.Assets;
+using NArk.Abstractions.Blockchain;
+using NArk.Abstractions.Intents;
+using NArk.Abstractions.Safety;
+using NArk.Abstractions.Wallets;
+using NArk.Blockchain;
+using NArk.Core.Services;
+using NArk.Core.Wallet;
+using NArk.Hosting;
+using NArk.Safety.AsyncKeyedLock;
 using NArk.Storage.EfCore.Hosting;
 
 namespace BTCPayApp.Core.Extensions;
@@ -29,6 +39,7 @@ public static class StartupExtensions
         serviceCollection.AddHostedService<AppDatabaseMigrator>();
         serviceCollection.AddSingleton<ConfigProvider, DatabaseConfigProvider>();
         serviceCollection.AddArkEfCoreStorage<AppDbContext>(o => o.StoreDateTimeOffsetAsTicks = true);
+        serviceCollection.ConfigureArkade();
         serviceCollection.AddMemoryCache();
         serviceCollection.AddHttpClient();
         serviceCollection.AddSingleton<BTCPayConnectionManager>();
@@ -42,6 +53,43 @@ public static class StartupExtensions
         serviceCollection.AddSingleton(sp => (IAccountManager)sp.GetRequiredService<AuthenticationStateProvider>());
         serviceCollection.AddSingleton<IAuthorizationHandler, AuthorizationHandler>();
         serviceCollection.AddAuthorizationCore(options => options.AddPolicies());
+
+        return serviceCollection;
+    }
+
+    /// <summary>
+    /// Wires the Arkade SDK (NArk) into the app: network config + transport, the
+    /// on-device owner wallet bootstrap, and the SDK core services. EF Core
+    /// storage (<c>AddArkEfCoreStorage</c>) is registered separately by the
+    /// caller and must already be present.
+    /// </summary>
+    private static IServiceCollection ConfigureArkade(this IServiceCollection serviceCollection)
+    {
+        var networkConfig = ArkConfiguration.Resolve();
+
+        // Network config + transport. REST/SSE matches the Arkade sample wallet
+        // and works in HTTP-only environments; AddArkRestTransport also registers
+        // the ArkNetworkConfig for injection.
+        serviceCollection.AddArkRestTransport(networkConfig);
+
+        // SDK infrastructure the core/background services resolve.
+        serviceCollection.AddSingleton<IIntentScheduler, SimpleIntentScheduler>();
+        serviceCollection.AddSingleton<ISafetyService, AsyncSafetyService>();
+        serviceCollection.AddSingleton<IBitcoinBlockchain>(_ =>
+            new EsploraBlockchain(new Uri(networkConfig.ExplorerUri!.TrimEnd('/') + "/api/")));
+        serviceCollection.AddSingleton<IWalletProvider, DefaultWalletProvider>();
+        serviceCollection.AddSingleton<IAssetManager, AssetManager>();
+
+        // Owner-wallet bootstrap MUST run before the NArk hosted lifecycle so the
+        // seed exists by the time the background services start. Hosted services
+        // start in registration order, so register it before AddArkCoreServices
+        // (which registers ArkHostedLifecycle).
+        serviceCollection.AddSingleton<ArkWalletBootstrapService>();
+        serviceCollection.AddSingleton<IHostedService>(sp => sp.GetRequiredService<ArkWalletBootstrapService>());
+
+        // SDK core services. Registers ArkHostedLifecycle as an IHostedService,
+        // which starts the Sweeper/Batch/Intent/VTXO-sync background services.
+        serviceCollection.AddArkCoreServices();
 
         return serviceCollection;
     }
