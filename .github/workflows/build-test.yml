@@ -38,12 +38,22 @@ jobs:
             10.0.x
       - name: Build
         run: dotnet build --configuration Release BTCPayApp.Server
-      # Setup infrastructure
+      # Setup infrastructure.
+      # Bounded + non-blocking (2026-05-27): these only exist to back the integration test, which
+      # currently can't compile on the runner (the deferred Razor SDK-generator bug — see "Run tests"
+      # below), so BTCPay never gets exercised. The BTCPay health-wait has no internal timeout and was
+      # hanging the job for hours on a slow/flaky cold start; timeout-minutes + continue-on-error bound
+      # it and keep it off the critical path. Re-tighten (drop continue-on-error) once the Razor bug is
+      # fixed and the test runs again. The `Build` step above stays the hard compile gate.
       - name: Start containers
+        timeout-minutes: 20
+        continue-on-error: true
         run: |
           docker compose -f "submodules/btcpayserver/BTCPayServer.Tests/docker-compose.yml" build
           docker compose -f "submodules/btcpayserver/BTCPayServer.Tests/docker-compose.yml" up -d dev
       - name: Start BTCPay
+        timeout-minutes: 20
+        continue-on-error: true
         run: |
           ./setup.sh
           cd submodules/btcpayserver
