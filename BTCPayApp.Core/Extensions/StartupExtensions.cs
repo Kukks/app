@@ -110,6 +110,7 @@ public static class StartupExtensions
         // The on-device seed never leaves this process — every call validates
         // the requested walletId matches the owner wallet before signing.
         serviceCollection.AddSingleton<ArkSignerService>();
+        serviceCollection.AddSingleton<MnemonicBackupService>();
 
         return serviceCollection;
     }
