@@ -37,6 +37,17 @@
       <Private>true</Private>
       <ExcludeAssets>none</ExcludeAssets>
     </ProjectReference>
+    <!-- Cross-plugin seam: BTCPayAppDeviceProxy implements
+         BTCPayServer.Plugins.ArkPayServer.Services.IBTCPayAppDeviceProxy
+         (defined in btcpay-arkade) so the Arkade plugin can pick up remote
+         signing for stores paired with a connected BTCPayApp device. The
+         Arkade plugin's own NArk.Abstractions copy is the source of truth for
+         the IRemoteSignerTransport contract on the server side; the device
+         side speaks the parent's NArk via BTCPayApp.Core. Private=false: we
+         don't ship the Arkade plugin's DLLs from our plugin package — the
+         binding happens at the BTCPayServer host's plugin DI container,
+         which loads each plugin's assemblies once. -->
+    <ProjectReference Include="..\submodules\btcpay-arkade\BTCPayServer.Plugins.ArkPayServer\BTCPayServer.Plugins.ArkPayServer.csproj" />
     <EmbeddedResource Include="Resources\**" />
     <PackageReference Include="Grpc.AspNetCore" Version="2.65.0"/>
     <PackageReference Include="Laraue.EfCoreTriggers.PostgreSql" Version="10.4.0" />
