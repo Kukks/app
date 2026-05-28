@@ -5,3 +5,6 @@
 [submodule "submodules/NArk"]
 	path = submodules/NArk
 	url = https://github.com/arkade-os/dotnet-sdk.git
+[submodule "submodules/btcpay-arkade"]
+	path = submodules/btcpay-arkade
+	url = https://github.com/ArkLabsHQ/btcpay-arkade
