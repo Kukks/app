@@ -1,6 +1,9 @@
 using BTCPayServer.Client.Models;
 using BTCPayServer.Lightning;
 using NBitcoin;
+using NBitcoin.Scripting;
+using NBitcoin.Secp256k1;
+using NBitcoin.Secp256k1.Musig;
 
 namespace BTCPayApp.Core.BTCPayServer;
 
@@ -12,6 +15,22 @@ public interface IBTCPayAppHubClient
     Task NotifyServerNode(string nodeInfo);
     Task TransactionDetected(TransactionDetectedRequest request);
     Task NewBlock(string block);
+    // Notifies the device which BTCPayApp instance is currently master for its
+    // user (or null if no instance is). Called from BTCPayAppState when the
+    // master flag is updated for any connection in the user's group.
+    Task MasterUpdated(long? deviceIdentifier);
+
+    // Remote-signer callbacks. Mirror NArk.Abstractions.Wallets.IRemoteSignerTransport
+    // (post-rework HEAD of the watch-only/remote-signing PR) with a walletId
+    // first arg so the server-side BTCPayAppDeviceProxy can address the right
+    // owner-wallet on the connected device. The device-side BTCPayAppServerClient
+    // forwards each call to ArkSignerService, which resolves the local
+    // IArkadeWalletSigner via the parent's NArk and validates the walletId
+    // matches the device's owner wallet before signing.
+    Task<ECPubKey> GetPubKey(string walletId, OutputDescriptor descriptor);
+    Task<MusigPartialSignature> SignMusig(string walletId, OutputDescriptor descriptor, MusigContext context, MusigPrivNonce nonce);
+    Task<(ECXOnlyPubKey, SecpSchnorrSignature)> Sign(string walletId, OutputDescriptor descriptor, uint256 hash);
+    Task<MusigPrivNonce> GenerateNonces(string walletId, OutputDescriptor descriptor, MusigContext context);
 }
 
 //methods available on the hub in the server

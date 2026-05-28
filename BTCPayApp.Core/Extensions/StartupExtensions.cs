@@ -105,6 +105,12 @@ public static class StartupExtensions
         // On-demand boarding-address derivation for the owner wallet.
         serviceCollection.AddSingleton<ArkadeWalletService>();
 
+        // Bridges remote-signing requests that the BTCPayServer companion plugin
+        // forwards over the SignalR hub down to the local IArkadeWalletSigner.
+        // The on-device seed never leaves this process — every call validates
+        // the requested walletId matches the owner wallet before signing.
+        serviceCollection.AddSingleton<ArkSignerService>();
+
         return serviceCollection;
     }
 }
