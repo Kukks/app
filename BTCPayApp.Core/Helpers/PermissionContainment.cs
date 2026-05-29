@@ -13,14 +13,30 @@ namespace BTCPayApp.Core.Helpers;
 /// <c>PermissionSet.Contains(policy, store)</c> / <c>Policies.PolicyMap</c> helpers that earlier
 /// versions of <c>BTCPayServer.Client</c> exposed but current master no longer ships.
 ///
-/// FLAGGED FOR HUMAN REVIEW: this is security-sensitive store-access logic. The hierarchy below must
-/// be kept in sync with the built-in policy definitions in btcpayserver master.
+/// SECURITY REVIEW (2026-05-29 vs btcpayserver master):
+/// <list type="bullet">
+/// <item>Policy hierarchy matches the 15 parent/child entries + 17 standalone entries +
+/// <see cref="Policies.Unrestricted"/> root in
+/// <c>BTCPayServerServices.AddPolicyDefinitions</c> verbatim.</item>
+/// <item>Containment algorithm matches <c>PermissionService.ContainsPolicy</c>: a granted
+/// policy contains a requested one iff the granted policy appears in the requested policy's
+/// ancestor chain (with Unrestricted as the root of every tree).</item>
+/// <item>Per-permission <c>Contains</c> matches <c>PermissionService.Contains</c>: policy
+/// containment AND (null scope OR scope-equality). The <c>anyScope</c> param btcpayserver
+/// exposes is not needed here — the only caller is
+/// <c>AuthorizationHandler</c>, which always supplies a concrete store id, so we drop it.</item>
+/// </list>
+/// If btcpayserver master adds, removes, or re-parents any built-in policy, the
+/// <see cref="IncludedPermissions"/> map and the <see cref="StandalonePolicies"/> array MUST
+/// be updated here. The submodule pin records which btcpayserver commit was the basis of the
+/// last review — re-run the diff against the current submodule HEAD when bumping it.
 /// </summary>
 public static class PermissionContainment
 {
     // Parent policy -> directly included (child) policies.
     // Source of truth: BTCPayServerServices.AddPolicyDefinitions (btcpayserver master).
-    private static readonly Dictionary<string, string[]> IncludedPermissions = new()
+    // Case-insensitive to match PermissionService's definitionsByPermission (OrdinalIgnoreCase).
+    private static readonly Dictionary<string, string[]> IncludedPermissions = new(StringComparer.OrdinalIgnoreCase)
     {
         [Policies.CanModifyInvoices] = new[]
         {
@@ -108,7 +124,7 @@ public static class PermissionContainment
     private static IReadOnlyDictionary<string, HashSet<string>> BuildAncestors()
     {
         // Collect every policy that participates in the built-in definitions.
-        var allPolicies = new HashSet<string>(StandalonePolicies) { Policies.Unrestricted };
+        var allPolicies = new HashSet<string>(StandalonePolicies, StringComparer.OrdinalIgnoreCase) { Policies.Unrestricted };
         foreach (var (parent, included) in IncludedPermissions)
         {
             allPolicies.Add(parent);
@@ -117,7 +133,7 @@ public static class PermissionContainment
         }
 
         // parent -> children, mirroring PermissionService's node graph.
-        var childrenByPolicy = allPolicies.ToDictionary(p => p, _ => new HashSet<string>());
+        var childrenByPolicy = allPolicies.ToDictionary(p => p, _ => new HashSet<string>(StringComparer.OrdinalIgnoreCase), StringComparer.OrdinalIgnoreCase);
         foreach (var (parent, included) in IncludedPermissions)
         {
             foreach (var child in included)
@@ -126,7 +142,7 @@ public static class PermissionContainment
 
         // Anything that is not included by another policy becomes a child of Unrestricted,
         // matching PermissionService's constructor (orphans attach under Unrestricted).
-        var hasParent = new HashSet<string>();
+        var hasParent = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var included in childrenByPolicy.Values)
         {
             foreach (var child in included)
@@ -134,14 +150,14 @@ public static class PermissionContainment
         }
         foreach (var policy in allPolicies)
         {
-            if (policy == Policies.Unrestricted)
+            if (string.Equals(policy, Policies.Unrestricted, StringComparison.OrdinalIgnoreCase))
                 continue;
             if (!hasParent.Contains(policy))
                 childrenByPolicy[Policies.Unrestricted].Add(policy);
         }
 
         // Transitively walk parents for each policy to get its ancestor set (including itself).
-        var ancestors = allPolicies.ToDictionary(p => p, p => new HashSet<string> { p });
+        var ancestors = allPolicies.ToDictionary(p => p, p => new HashSet<string>(StringComparer.OrdinalIgnoreCase) { p }, StringComparer.OrdinalIgnoreCase);
         foreach (var policy in allPolicies)
         {
             var stack = new Stack<string>();
