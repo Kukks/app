@@ -37,6 +37,11 @@ public static class Routes
     public const string ServerUsers = "/settings/server/users";
     public const string ServerUser = "/settings/server/users/{UserId}";
     public const string InviteServerUser = "/settings/server/invite-user";
+    public const string Wallet = "/wallet";
+    public const string WalletBackup = "/wallet/backup";
+    public const string WalletBackupVerify = "/wallet/backup/verify";
+    public const string WalletNetwork = "/wallet/network";
+    public const string SignerStatus = "/wallet/signer";
 
     // paths with params
     public static string StorePath(string storeId) => Store.Replace("{StoreId}", storeId);
