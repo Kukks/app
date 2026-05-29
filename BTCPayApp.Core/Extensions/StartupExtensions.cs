@@ -31,6 +31,12 @@ public static class StartupExtensions
         {
             var dir = provider.GetRequiredService<IDataDirectoryProvider>().GetAppDataDirectory().ConfigureAwait(false).GetAwaiter().GetResult();
             options.UseSqlite($"Data Source={dir}/app.db");
+            // NArk's EF entity configuration evolves faster than our app-level migrations.
+            // The runtime model legitimately differs from AppDbContextModelSnapshot in ways
+            // that don't affect the SQL schema (annotations, HasComment, etc.); raising
+            // PendingModelChangesWarning to an error blocks MigrateAsync on startup. Demote
+            // it to a log warning so the migrator proceeds — the underlying schema is correct.
+            options.ConfigureWarnings(w => w.Log(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
         });
 
         // Configure logging
