@@ -35,7 +35,10 @@
 
   <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
     <AndroidUseAapt2>True</AndroidUseAapt2>
-    <AndroidEnableMultiDex>False</AndroidEnableMultiDex>
+    <!-- Multi-dex on: the NArk + BTCPayServer.Client + Fluxor + EF dependency
+         graph blows past Android's 65,536 method limit per dex, so D8 was
+         exiting code 2 during packaging. -->
+    <AndroidEnableMultiDex>True</AndroidEnableMultiDex>
     <AndroidCreatePackagePerAbi>False</AndroidCreatePackagePerAbi>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
     <EmbedAssembliesIntoApk>True</EmbedAssembliesIntoApk>
