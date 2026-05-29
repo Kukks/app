@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using NArk.Abstractions.Assets;
 using NArk.Abstractions.Blockchain;
 using NArk.Abstractions.Intents;
@@ -16,6 +17,8 @@ using NArk.Abstractions.Safety;
 using NArk.Abstractions.Wallets;
 using NArk.Blockchain;
 using NArk.Core.Services;
+using NArk.Core.Transport;
+using NArk.Transport.RestClient;
 using NArk.Core.Wallet;
 using NArk.Hosting;
 using NArk.Safety.AsyncKeyedLock;
@@ -71,18 +74,50 @@ public static class StartupExtensions
     /// </summary>
     private static IServiceCollection ConfigureArkade(this IServiceCollection serviceCollection)
     {
-        var networkConfig = ArkConfiguration.Resolve();
+        serviceCollection.AddSingleton<ArkadeOperatorConfig>();
 
-        // Network config + transport. REST/SSE matches the Arkade sample wallet
-        // and works in HTTP-only environments; AddArkRestTransport also registers
-        // the ArkNetworkConfig for injection.
-        serviceCollection.AddArkRestTransport(networkConfig);
+        // Lazy network resolve via factory. The first consumer of this singleton
+        // is typically the transport (during hosted-service start, after the
+        // migrator). But early DI traversal — e.g. when a test or UI code path
+        // resolves BTCPayConnectionManager before the host's hosted services
+        // start — can fire this factory before the Settings table exists. In
+        // that window "no setting persisted yet" and "schema not ready yet" are
+        // semantically the same: fall back to the bundled default. Once the
+        // host starts, every subsequent resolve reads the merchant's choice
+        // (the factory is a singleton, so this is a one-shot fallback).
+        serviceCollection.AddSingleton<ArkNetworkConfig>(sp =>
+        {
+            try
+            {
+                return sp.GetRequiredService<ArkadeOperatorConfig>().ResolveAsync().GetAwaiter().GetResult();
+            }
+            catch (Microsoft.Data.Sqlite.SqliteException ex) when (ex.Message.Contains("no such table", StringComparison.OrdinalIgnoreCase))
+            {
+                return ArkConfiguration.Resolve();
+            }
+        });
+
+        // Inline what AddArkRestTransport(config) does
+        // (submodules/NArk/NArk.Core/Hosting/ServiceCollectionExtensions.cs:203-220),
+        // but resolving the config via the factory above instead of taking a
+        // concrete instance. No NArk changes required.
+        serviceCollection.AddSingleton(sp =>
+            new RestClientTransport(sp.GetRequiredService<ArkNetworkConfig>().ArkUri));
+        serviceCollection.AddSingleton<IClientTransport>(sp =>
+        {
+            var inner = sp.GetRequiredService<RestClientTransport>();
+            var logger = sp.GetService<ILogger<CachingClientTransport>>();
+            return new CachingClientTransport(inner, logger);
+        });
 
         // SDK infrastructure the core/background services resolve.
         serviceCollection.AddSingleton<IIntentScheduler, SimpleIntentScheduler>();
         serviceCollection.AddSingleton<ISafetyService, AsyncSafetyService>();
-        serviceCollection.AddSingleton<IBitcoinBlockchain>(_ =>
-            new EsploraBlockchain(new Uri(networkConfig.ExplorerUri!.TrimEnd('/') + "/api/")));
+        serviceCollection.AddSingleton<IBitcoinBlockchain>(sp =>
+        {
+            var cfg = sp.GetRequiredService<ArkNetworkConfig>();
+            return new EsploraBlockchain(new Uri(cfg.ExplorerUri!.TrimEnd('/') + "/api/"));
+        });
         serviceCollection.AddSingleton<IWalletProvider, DefaultWalletProvider>();
         serviceCollection.AddSingleton<IAssetManager, AssetManager>();
 
