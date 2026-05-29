@@ -57,6 +57,17 @@
 
   <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android' And '$(Configuration)' == 'Release'">
     <PublishTrimmed>False</PublishTrimmed>
+  </PropertyGroup>
+
+  <!-- Release signing only when the password is actually available
+       (developer machine with the env var set, or CI with the secret
+       configured). Without it, fall through to MAUI's default debug
+       keystore so the build still produces an installable-on-dev APK
+       and the pipeline keeps verifying. This avoids the previous
+       failure mode where CI without the secret produced a misleading
+       "java.exe exited with code 2" / "UnrecoverableKeyException"
+       deep in the signing step. -->
+  <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android' And '$(Configuration)' == 'Release' And '$(ANDROID_SIGNING_PASSWORD)' != ''">
     <AndroidKeyStore>True</AndroidKeyStore>
     <AndroidSigningKeyStore>../btcpayapp.keystore</AndroidSigningKeyStore>
     <AndroidSigningKeyAlias>btcpayapp</AndroidSigningKeyAlias>
