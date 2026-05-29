@@ -1,0 +1,55 @@
+@using BTCPayApp.Core.Models
+@using BTCPayApp.Core.Services
+@inject SignerStatusService StatusService
+@inject NavigationManager Nav
+@implements IDisposable
+
+@if (_status is not null)
+{
+    <button class="signer-badge signer-badge-@_status.Level.ToString().ToLowerInvariant()" type="button" @onclick="OpenDetails">
+        <span class="dot"></span>
+        <span class="label">@LabelFor(_status)</span>
+    </button>
+}
+
+<style>
+    .signer-badge { display:inline-flex; align-items:center; gap:0.5rem; border:none; background:transparent; padding:0.25rem 0.5rem; border-radius:1rem; }
+    .signer-badge .dot { width:0.5rem; height:0.5rem; border-radius:50%; }
+    .signer-badge-healthy .dot  { background: var(--btcpay-success); }
+    .signer-badge-degraded .dot { background: var(--btcpay-warning); }
+    .signer-badge-unsafe .dot   { background: var(--btcpay-danger); }
+    .signer-badge .label { font-size:0.75rem; color:var(--btcpay-body-text-muted); }
+</style>
+
+@code {
+    private SignerStatus? _status;
+    private CancellationTokenSource? _cts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _cts = new CancellationTokenSource();
+        _ = PollLoop(_cts.Token);
+        _status = await StatusService.SnapshotAsync();
+    }
+
+    private async Task PollLoop(CancellationToken ct)
+    {
+        while (!ct.IsCancellationRequested)
+        {
+            try { await Task.Delay(TimeSpan.FromSeconds(5), ct); } catch (OperationCanceledException) { return; }
+            _status = await StatusService.SnapshotAsync();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private static string LabelFor(SignerStatus s) => s.Level switch
+    {
+        SignerHealthLevel.Healthy  => "Signer ready",
+        SignerHealthLevel.Degraded => "Signer degraded",
+        _                          => "Signer unsafe"
+    };
+
+    private void OpenDetails() => Nav.NavigateTo(BTCPayApp.UI.Routes.SignerStatus);
+
+    public void Dispose() { _cts?.Cancel(); _cts?.Dispose(); }
+}
