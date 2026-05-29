@@ -153,6 +153,7 @@ public static class StartupExtensions
         serviceCollection.AddSingleton<ArkSignerService>();
         serviceCollection.AddSingleton<MnemonicBackupService>();
         serviceCollection.AddSingleton<SignerStatusService>();
+        serviceCollection.AddSingleton<MainnetPreflightService>();
 
         return serviceCollection;
     }
