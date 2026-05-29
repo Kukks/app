@@ -31,6 +31,7 @@
     {
         <AuthorizeView Policy="@Policies.CanModifyStoreSettings" Resource="StoreId">
             <div class="notifications d-flex justify-content-end align-items-center gap-2 mb-n4">
+                <a class="btn btn-outline-secondary btn-sm" href="@Routes.Wallet">Open wallet</a>
                 <SignerStatusBadge />
                 <NotificationsBell />
             </div>
