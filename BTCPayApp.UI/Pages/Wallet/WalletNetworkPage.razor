@@ -1,0 +1,110 @@
+@attribute [Route(Routes.WalletNetwork)]
+@using BTCPayApp.Core
+@using BTCPayApp.Core.Services
+@inject ArkadeOperatorConfig OperatorConfig
+@inject NavigationManager Nav
+
+<PageTitle>Arkade network</PageTitle>
+
+<section class="container py-4">
+    <h1 class="mb-3">Arkade network</h1>
+    <p class="text-secondary">Pick the network this device should operate on. Changing it cancels and re-registers the on-device wallet against the new operator. Funds on the previous operator will no longer be reachable from this app.</p>
+
+    @if (_error is not null) { <Alert Type="danger" class="mb-3">@_error</Alert> }
+    @if (_testResult is not null) { <Alert Type="@_testResult.Type" class="mb-3">@_testResult.Message</Alert> }
+
+    <div class="mb-3">
+        @foreach (var n in new[] { "mainnet", "mutinynet", "regtest" })
+        {
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="network" id="network-@n"
+                       checked="@(_network == n)" @onchange="() => SetNetwork(n)" />
+                <label class="form-check-label" for="network-@n">
+                    @(n switch { "mainnet" => "Mainnet (real Bitcoin)", "mutinynet" => "Mutinynet (signet, default)", _ => "Regtest (local)" })
+                </label>
+            </div>
+        }
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Operator endpoint (optional)</label>
+        <input class="form-control" placeholder="@_resolvedDefault" @bind="_endpoint" />
+        <small class="form-text">Leave blank to use the default operator for the selected network.</small>
+    </div>
+
+    <div class="d-flex gap-2 flex-column flex-md-row">
+        <button class="btn btn-outline-secondary flex-fill" type="button" @onclick="TestConnection" disabled="@_testing">
+            @(_testing ? "Testing..." : "Test connection")
+        </button>
+        <button class="btn btn-primary flex-fill" type="button" @onclick="Save" disabled="@(_testResult?.Type != "success")">
+            Save
+        </button>
+    </div>
+</section>
+
+@code {
+    private string _network = ArkConfiguration.DefaultNetwork;
+    private string? _endpoint;
+    private string _resolvedDefault = "";
+    private bool _testing;
+    private AlertModel? _testResult;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _network = await OperatorConfig.GetNetworkNameAsync();
+        _endpoint = await OperatorConfig.GetEndpointOverrideAsync();
+        UpdateDefault();
+    }
+
+    private void SetNetwork(string n)
+    {
+        _network = n;
+        _testResult = null;
+        UpdateDefault();
+    }
+
+    private void UpdateDefault()
+        => _resolvedDefault = ArkConfiguration.Resolve(_network).ArkUri;
+
+    private async Task TestConnection()
+    {
+        _testing = true; _error = null; _testResult = null;
+        try
+        {
+            var candidate = ArkConfiguration.Resolve(_network);
+            if (!string.IsNullOrWhiteSpace(_endpoint))
+                candidate = candidate with { ArkUri = _endpoint.Trim() };
+
+            // Ping the candidate operator. We do NOT use the resolved IClientTransport
+            // because that singleton is still bound to the OLD config until restart.
+            // A raw HTTP HEAD/GET against the operator's root is the cheapest probe
+            // that proves the URL is reachable; we don't need an authoritative API
+            // contract here — just "is something answering."
+            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+            var response = await http.GetAsync(candidate.ArkUri);
+            if ((int)response.StatusCode >= 500)
+            {
+                _testResult = new AlertModel("danger", $"Operator responded with {(int)response.StatusCode} {response.ReasonPhrase}.");
+                return;
+            }
+            _testResult = new AlertModel("success", $"Operator reachable ({(int)response.StatusCode}).");
+        }
+        catch (Exception ex)
+        {
+            _testResult = new AlertModel("danger", $"Failed to reach operator: {ex.Message}");
+        }
+        finally
+        {
+            _testing = false;
+        }
+    }
+
+    private async Task Save()
+    {
+        await OperatorConfig.SetAsync(_network, _endpoint);
+        Nav.NavigateTo(Routes.Settings + "?Success=Network%20updated%2C%20restart%20the%20app%20to%20apply", forceLoad: true);
+    }
+
+    private record AlertModel(string Type, string Message);
+}
