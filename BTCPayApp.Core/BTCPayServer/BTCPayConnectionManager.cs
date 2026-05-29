@@ -3,6 +3,7 @@ using System.Net.WebSockets;
 using BTCPayApp.Core.Auth;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Helpers;
+using BTCPayApp.Core.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,7 +20,8 @@ public class BTCPayConnectionManager(
     ILogger<BTCPayConnectionManager> logger,
     BTCPayAppServerClient btcPayAppServerClient,
     IBTCPayAppHubClient btcPayAppServerClientInterface,
-    ConfigProvider configProvider)
+    ConfigProvider configProvider,
+    SignerStatusService signerStatusService)
     : BaseHostedService(logger), IHubConnectionObserver
 {
     private BTCPayConnectionState _connectionState = BTCPayConnectionState.Init;
@@ -74,6 +76,7 @@ public class BTCPayConnectionManager(
     private async Task OnConnectionChanged(object? sender, (BTCPayConnectionState Old, BTCPayConnectionState New) e)
     {
         var newState = e.New;
+        signerStatusService.UpdateHubConnected(e.New == BTCPayConnectionState.Connected);
         try
         {
             var account = accountManager.Account;

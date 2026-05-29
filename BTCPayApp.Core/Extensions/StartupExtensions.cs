@@ -152,6 +152,7 @@ public static class StartupExtensions
         // the requested walletId matches the owner wallet before signing.
         serviceCollection.AddSingleton<ArkSignerService>();
         serviceCollection.AddSingleton<MnemonicBackupService>();
+        serviceCollection.AddSingleton<SignerStatusService>();
 
         return serviceCollection;
     }

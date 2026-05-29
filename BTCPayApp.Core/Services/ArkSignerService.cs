@@ -22,11 +22,14 @@ namespace BTCPayApp.Core.Services;
 /// <item>delegates the cryptographic operation to that signer.</item>
 /// </list>
 /// The local signer is the only place the on-device seed is ever exercised; the
-/// seed never leaves the device.
+/// seed never leaves the device. After every successful signing op we bump the
+/// <see cref="SignerStatusService"/> heartbeat so the badge surfaces "Last
+/// signed"; refusals record the failure message so the merchant sees why.
 /// </summary>
 public class ArkSignerService(
     ConfigProvider configProvider,
-    IWalletProvider walletProvider)
+    IWalletProvider walletProvider,
+    SignerStatusService statusService)
 {
     /// <summary>
     /// Gets the compressed public key for the given descriptor on the owner wallet.
@@ -37,7 +40,9 @@ public class ArkSignerService(
         CancellationToken cancellationToken = default)
     {
         var signer = await ResolveSignerAsync(walletId, cancellationToken);
-        return await signer.GetPubKey(descriptor, cancellationToken);
+        var result = await signer.GetPubKey(descriptor, cancellationToken);
+        statusService.RecordSign();
+        return result;
     }
 
     /// <summary>
@@ -51,7 +56,9 @@ public class ArkSignerService(
         CancellationToken cancellationToken = default)
     {
         var signer = await ResolveSignerAsync(walletId, cancellationToken);
-        return await signer.SignMusig(descriptor, context, nonce, cancellationToken);
+        var result = await signer.SignMusig(descriptor, context, nonce, cancellationToken);
+        statusService.RecordSign();
+        return result;
     }
 
     /// <summary>
@@ -65,7 +72,9 @@ public class ArkSignerService(
         CancellationToken cancellationToken = default)
     {
         var signer = await ResolveSignerAsync(walletId, cancellationToken);
-        return await signer.Sign(descriptor, hash, cancellationToken);
+        var result = await signer.Sign(descriptor, hash, cancellationToken);
+        statusService.RecordSign();
+        return result;
     }
 
     /// <summary>
@@ -78,7 +87,9 @@ public class ArkSignerService(
         CancellationToken cancellationToken = default)
     {
         var signer = await ResolveSignerAsync(walletId, cancellationToken);
-        return await signer.GenerateNonces(descriptor, context, cancellationToken);
+        var result = await signer.GenerateNonces(descriptor, context, cancellationToken);
+        statusService.RecordSign();
+        return result;
     }
 
     private async Task<IArkadeWalletSigner> ResolveSignerAsync(
@@ -90,20 +101,29 @@ public class ArkSignerService(
 
         var ownerWalletId = await configProvider.Get<string>(ArkWalletBootstrapService.WalletIdKey);
         if (string.IsNullOrEmpty(ownerWalletId))
-            throw new InvalidOperationException(
-                $"Refusing to sign for wallet '{walletId}': the on-device owner wallet has not finished " +
-                "registering with NArk yet. Registration runs in the background and needs the Arkade " +
-                "server reachable — retry shortly.");
+        {
+            var msg = $"Refusing to sign for wallet '{walletId}': the on-device owner wallet has not finished " +
+                      "registering with NArk yet. Registration runs in the background and needs the Arkade " +
+                      "server reachable — retry shortly.";
+            statusService.RecordError(msg);
+            throw new InvalidOperationException(msg);
+        }
 
         if (!string.Equals(ownerWalletId, walletId, StringComparison.Ordinal))
-            throw new InvalidOperationException(
-                $"Refusing to sign for wallet '{walletId}' — owner wallet on this device is '{ownerWalletId}'.");
+        {
+            var msg = $"Refusing to sign for wallet '{walletId}' — owner wallet on this device is '{ownerWalletId}'.";
+            statusService.RecordError(msg);
+            throw new InvalidOperationException(msg);
+        }
 
         var signer = await walletProvider.GetSignerAsync(ownerWalletId, cancellationToken);
         if (signer is null)
-            throw new InvalidOperationException(
-                $"Owner wallet '{ownerWalletId}' is not yet ready to sign (no local signer resolved). " +
-                "This typically means the wallet record has not landed in NArk storage yet; retry shortly.");
+        {
+            var msg = $"Owner wallet '{ownerWalletId}' is not yet ready to sign (no local signer resolved). " +
+                      "This typically means the wallet record has not landed in NArk storage yet; retry shortly.";
+            statusService.RecordError(msg);
+            throw new InvalidOperationException(msg);
+        }
 
         return signer;
     }
