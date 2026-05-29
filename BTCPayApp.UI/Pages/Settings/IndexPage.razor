@@ -15,6 +15,8 @@
 @inject IAccountManager AccountManager
 @inject IState<UserState> UserState
 @inject IJSRuntime JS
+@inject BTCPayApp.Core.Services.MnemonicBackupService BackupService
+@inject BTCPayApp.Core.Services.ArkadeOperatorConfig OperatorConfig
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 <PageTitle>Settings</PageTitle>
@@ -211,6 +213,44 @@
             </AuthorizeView>
 
         <AuthorizeView Policy="@AppPolicies.CanModifySettings">
+            <h2>Wallet</h2>
+            <div class="box">
+                <ul class="list-group list-group-flush list-group-links">
+                    <li class="list-group-item">
+                        <a href="@Routes.WalletBackup">
+                            <Icon Symbol="key" />
+                            <span>Back up mnemonic</span>
+                            @if (_backupVerifiedAt is null)
+                            {
+                                <span class="badge bg-danger ms-auto">Pending</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted ms-auto">@_backupVerifiedAt.Value.ToLocalTime().ToString("yyyy-MM-dd")</span>
+                            }
+                            <Icon Symbol="caret-right" />
+                        </a>
+                    </li>
+                    <li class="list-group-item">
+                        <a href="@Routes.WalletNetwork">
+                            <Icon Symbol="nav-server-settings" />
+                            <span>Arkade network</span>
+                            <span class="text-muted ms-auto">@_networkName</span>
+                            <Icon Symbol="caret-right" />
+                        </a>
+                    </li>
+                    <li class="list-group-item">
+                        <a href="@Routes.SignerStatus">
+                            <Icon Symbol="dots" class="p-2" />
+                            <span>Signer status</span>
+                            <Icon Symbol="caret-right" />
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </AuthorizeView>
+
+        <AuthorizeView Policy="@AppPolicies.CanModifySettings">
             <h2>Security</h2>
             <div class="box">
                 <ul class="list-group list-group-flush list-group-links">
@@ -319,6 +359,8 @@
     private bool _sending;
     private string? _errorMessage;
     private long _deviceId;
+    private DateTimeOffset? _backupVerifiedAt;
+    private string _networkName = "";
 
     private class SettingsModel
     {
@@ -344,6 +386,8 @@
         _account = AccountManager.Account;
         _config = await ConfigProvider.Get<BTCPayAppConfig>(BTCPayAppConfig.Key);
         _deviceId = await ConfigProvider.GetDeviceIdentifier();
+        _backupVerifiedAt = await BackupService.GetBackupVerifiedAtAsync();
+        _networkName = await OperatorConfig.GetNetworkNameAsync();
 
         Model.Theme = UiState.Value.SelectedTheme;
     }
