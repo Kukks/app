@@ -25,6 +25,7 @@
 else
 {
     <section class="container px-0">
+        <MainnetPreflightBanner />
         @if (!string.IsNullOrEmpty(Error))
         {
             <Alert Type="danger" class="mx-3">@Error</Alert>
