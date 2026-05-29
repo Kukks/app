@@ -21,16 +21,19 @@ public interface IBTCPayAppHubClient
     Task MasterUpdated(long? deviceIdentifier);
 
     // Remote-signer callbacks. Mirror NArk.Abstractions.Wallets.IRemoteSignerTransport
-    // (post-rework HEAD of the watch-only/remote-signing PR) with a walletId
-    // first arg so the server-side BTCPayAppDeviceProxy can address the right
-    // owner-wallet on the connected device. The device-side BTCPayAppServerClient
-    // forwards each call to ArkSignerService, which resolves the local
-    // IArkadeWalletSigner via the parent's NArk and validates the walletId
-    // matches the device's owner wallet before signing.
+    // (NArk master, post-#107/#113/#114) with a walletId first arg so the
+    // server-side BTCPayAppDeviceProxy can address the right owner-wallet on
+    // the connected device. The device-side BTCPayAppServerClient forwards each
+    // call to ArkSignerService, which resolves the local IArkadeWalletSigner
+    // and validates the walletId matches the device's owner wallet before
+    // signing. The MuSig2 secret nonce never crosses this wire: GenerateNonces
+    // returns only the public half, and SignMusig refers to the secret half
+    // by the same sessionId the local signer indexed it under.
+    Task<bool> KnowsWallet(string walletId);
     Task<ECPubKey> GetPubKey(string walletId, OutputDescriptor descriptor);
-    Task<MusigPartialSignature> SignMusig(string walletId, OutputDescriptor descriptor, MusigContext context, MusigPrivNonce nonce);
+    Task<MusigPartialSignature> SignMusig(string walletId, OutputDescriptor descriptor, MusigContext context, string sessionId);
     Task<(ECXOnlyPubKey, SecpSchnorrSignature)> Sign(string walletId, OutputDescriptor descriptor, uint256 hash);
-    Task<MusigPrivNonce> GenerateNonces(string walletId, OutputDescriptor descriptor, MusigContext context);
+    Task<MusigPubNonce> GenerateNonces(string walletId, OutputDescriptor descriptor, MusigContext context, string sessionId);
 }
 
 //methods available on the hub in the server

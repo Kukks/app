@@ -46,17 +46,20 @@ public class ArkSignerService(
     }
 
     /// <summary>
-    /// Produces a MuSig2 partial signature on the owner wallet.
+    /// Produces a MuSig2 partial signature on the owner wallet. The local signer
+    /// looks up the secret nonce by <paramref name="sessionId"/> from the store
+    /// populated by a prior <see cref="GenerateNoncesAsync"/> call — the secret
+    /// half never crossed the SignalR boundary.
     /// </summary>
     public async Task<MusigPartialSignature> SignMusigAsync(
         string walletId,
         OutputDescriptor descriptor,
         MusigContext context,
-        MusigPrivNonce nonce,
+        string sessionId,
         CancellationToken cancellationToken = default)
     {
         var signer = await ResolveSignerAsync(walletId, cancellationToken);
-        var result = await signer.SignMusig(descriptor, context, nonce, cancellationToken);
+        var result = await signer.SignMusig(descriptor, context, sessionId, cancellationToken);
         statusService.RecordSign();
         return result;
     }
@@ -78,18 +81,37 @@ public class ArkSignerService(
     }
 
     /// <summary>
-    /// Generates a secret MuSig2 nonce on the owner wallet for the supplied context.
+    /// Generates a MuSig2 nonce pair on the owner wallet for the supplied
+    /// context, retains the secret half on-device indexed by
+    /// <paramref name="sessionId"/>, and returns the public half over the wire.
     /// </summary>
-    public async Task<MusigPrivNonce> GenerateNoncesAsync(
+    public async Task<MusigPubNonce> GenerateNoncesAsync(
         string walletId,
         OutputDescriptor descriptor,
         MusigContext context,
+        string sessionId,
         CancellationToken cancellationToken = default)
     {
         var signer = await ResolveSignerAsync(walletId, cancellationToken);
-        var result = await signer.GenerateNonces(descriptor, context, cancellationToken);
+        var result = await signer.GenerateNonces(descriptor, context, sessionId, cancellationToken);
         statusService.RecordSign();
         return result;
+    }
+
+    /// <summary>
+    /// Indicates whether this device owns the given <paramref name="walletId"/>.
+    /// Returns <c>true</c> when the registered owner wallet matches — that's the
+    /// signal the server-side proxy uses to route a sign call to the right
+    /// device without a separate enrolment table. Lightweight: does NOT resolve
+    /// the local signer (no NArk storage hit), only checks
+    /// <see cref="ArkWalletBootstrapService.WalletIdKey"/>.
+    /// </summary>
+    public async Task<bool> KnowsWalletAsync(string walletId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(walletId)) return false;
+        var ownerWalletId = await configProvider.Get<string>(ArkWalletBootstrapService.WalletIdKey);
+        return !string.IsNullOrEmpty(ownerWalletId)
+               && string.Equals(ownerWalletId, walletId, StringComparison.Ordinal);
     }
 
     private async Task<IArkadeWalletSigner> ResolveSignerAsync(

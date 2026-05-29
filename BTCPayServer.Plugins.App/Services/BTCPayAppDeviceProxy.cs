@@ -28,23 +28,30 @@ namespace BTCPayServer.Plugins.App.Services;
 /// <see cref="InvalidOperationException"/> whose message starts with
 /// <c>"Refusing to sign for wallet"</c> when the requested wallet id does not
 /// match its locally-registered owner wallet — that's the per-device filter.
+/// <see cref="KnowsWalletAsync"/> uses the same walk, but probes the cheap
+/// <c>KnowsWallet</c> hub method instead of invoking a signing op.
 /// </para>
 /// <para>
 /// This design works for the common single-user / single-device pairing without
-/// requiring a server-side <c>walletId → userId</c> mapping. Pure
-/// <see cref="NArk.Abstractions.Wallets.WalletType.WatchOnly"/> wallets never hit
-/// this code path (NArk's <c>DefaultWalletProvider</c> only wraps the transport
-/// for <c>WalletType.Remote</c>); the failure modes that DO reach here are:
+/// requiring a server-side <c>walletId → userId</c> mapping. Pure watch-only
+/// wallets never hit this code path: per NArk master,
+/// <see cref="NArk.Abstractions.Wallets.IWalletProvider"/> only wraps the
+/// transport for a wallet when <see cref="KnowsWalletAsync"/> returns true,
+/// so a wallet with no local secret AND no remote device that claims it
+/// resolves to a null signer (watch-only).
 /// </para>
-/// <list type="bullet">
-/// <item>No master device connected — clear "open the app and reconnect" error.</item>
-/// <item>One or more devices connected but none owns <paramref name="walletId"/>
-///   — surface the last device's error so the merchant sees exactly why.</item>
-/// </list>
+/// <para>
+/// The MuSig2 secret nonce never crosses this hub: per NArk PR #113,
+/// <see cref="GenerateNoncesAsync"/> returns only the <see cref="MusigPubNonce"/>
+/// and the device's local signer stores the secret half indexed by
+/// <paramref name="sessionId"/>; <see cref="SignMusigAsync"/> refers to it by
+/// the same sessionId. The cryptographic claim of remote signing — "private
+/// material never leaves the device" — holds end-to-end.
+/// </para>
 /// <para>
 /// Multi-tenant deployments (multiple BTCPay users each with a paired device
-/// signing for distinct Arkade-Remote wallets) need an explicit enrolment
-/// table — that's deliberately out of scope here.
+/// signing for distinct Arkade wallets) need an explicit enrolment table —
+/// that's deliberately out of scope here.
 /// </para>
 /// </remarks>
 internal sealed class BTCPayAppDeviceProxy : IBTCPayAppDeviceProxy
@@ -60,6 +67,27 @@ internal sealed class BTCPayAppDeviceProxy : IBTCPayAppDeviceProxy
         _appState = appState;
     }
 
+    public async Task<bool> KnowsWalletAsync(string walletId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(walletId)) return false;
+
+        foreach (var connectionId in MasterConnectionIds())
+        {
+            try
+            {
+                var client = _hubContext.Clients.Client(connectionId);
+                if (await client.KnowsWallet(walletId)) return true;
+            }
+            catch
+            {
+                // Connection dropped or device errored — try the next one. We
+                // never want a transient hub failure to make the wallet provider
+                // fall back to "watch-only" for a wallet the device actually owns.
+            }
+        }
+        return false;
+    }
+
     public Task<ECPubKey> GetPubKeyAsync(
         string walletId,
         OutputDescriptor descriptor,
@@ -70,9 +98,9 @@ internal sealed class BTCPayAppDeviceProxy : IBTCPayAppDeviceProxy
         string walletId,
         OutputDescriptor descriptor,
         MusigContext context,
-        MusigPrivNonce nonce,
+        string sessionId,
         CancellationToken cancellationToken = default)
-        => ForwardAsync(walletId, client => client.SignMusig(walletId, descriptor, context, nonce));
+        => ForwardAsync(walletId, client => client.SignMusig(walletId, descriptor, context, sessionId));
 
     public Task<(ECXOnlyPubKey, SecpSchnorrSignature)> SignAsync(
         string walletId,
@@ -81,12 +109,19 @@ internal sealed class BTCPayAppDeviceProxy : IBTCPayAppDeviceProxy
         CancellationToken cancellationToken = default)
         => ForwardAsync(walletId, client => client.Sign(walletId, descriptor, hash));
 
-    public Task<MusigPrivNonce> GenerateNoncesAsync(
+    public Task<MusigPubNonce> GenerateNoncesAsync(
         string walletId,
         OutputDescriptor descriptor,
         MusigContext context,
+        string sessionId,
         CancellationToken cancellationToken = default)
-        => ForwardAsync(walletId, client => client.GenerateNonces(walletId, descriptor, context));
+        => ForwardAsync(walletId, client => client.GenerateNonces(walletId, descriptor, context, sessionId));
+
+    private System.Collections.Generic.List<string> MasterConnectionIds()
+        => _appState.Connections
+            .Where(kv => kv.Value.Master)
+            .Select(kv => kv.Key)
+            .ToList();
 
     private async Task<T> ForwardAsync<T>(string walletId, Func<IBTCPayAppHubClient, Task<T>> call)
     {
@@ -96,10 +131,7 @@ internal sealed class BTCPayAppDeviceProxy : IBTCPayAppDeviceProxy
         // Snapshot the currently-connected master devices. BTCPayAppState
         // enforces at-most-one master per user already, so this is the natural
         // set of "signers that should hold the seed for an Arkade owner wallet".
-        var connectionIds = _appState.Connections
-            .Where(kv => kv.Value.Master)
-            .Select(kv => kv.Key)
-            .ToList();
+        var connectionIds = MasterConnectionIds();
 
         if (connectionIds.Count == 0)
             throw new InvalidOperationException(
