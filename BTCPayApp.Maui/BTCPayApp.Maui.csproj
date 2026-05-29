@@ -39,6 +39,14 @@
          graph blows past Android's 65,536 method limit per dex, so D8 was
          exiting code 2 during packaging. -->
     <AndroidEnableMultiDex>True</AndroidEnableMultiDex>
+    <!-- Disable the linker on Android. R8 was OOMing on the BTCPayServer/NArk
+         class graph during dex packaging (java.exe exit 2). Skipping the linker
+         keeps every method in the APK, which is fine for a development build
+         and removes the heaviest JVM step from the pipeline. Once we have a
+         signing story for releases, re-enable with explicit linker rules. -->
+    <AndroidLinkMode>None</AndroidLinkMode>
+    <!-- Generous heap for the dex+R8 step on CI runners. -->
+    <AndroidJavaMaximumHeapSize>4G</AndroidJavaMaximumHeapSize>
     <AndroidCreatePackagePerAbi>False</AndroidCreatePackagePerAbi>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
     <EmbedAssembliesIntoApk>True</EmbedAssembliesIntoApk>
