@@ -45,6 +45,9 @@
          and removes the heaviest JVM step from the pipeline. Once we have a
          signing story for releases, re-enable with explicit linker rules. -->
     <AndroidLinkMode>None</AndroidLinkMode>
+    <!-- Interpreter mode: avoids AOT-related class-file generation that older D8
+         versions sometimes choke on. Pairs with RunAOTCompilation=false above. -->
+    <UseInterpreter>True</UseInterpreter>
     <!-- Generous heap for the dex+R8 step on CI runners. -->
     <AndroidJavaMaximumHeapSize>4G</AndroidJavaMaximumHeapSize>
     <AndroidCreatePackagePerAbi>False</AndroidCreatePackagePerAbi>

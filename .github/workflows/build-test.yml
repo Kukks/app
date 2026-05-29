@@ -103,10 +103,21 @@ jobs:
       - name: Build
         # TODO: Use proper keystore once we switch to real releases
         # https://learn.microsoft.com/en-us/dotnet/maui/android/deployment/publish-cli?view=net-maui-8.0#code-try-4
+        #
+        # -v:n + -bl emits the underlying D8/R8/aapt2 errors that the default quiet
+        # output swallows. java.exe exit 2 with no message has burned three iterations
+        # of guesswork; making this visible from the first failed run on is the cheaper path.
         run: |
-          dotnet publish BTCPayApp.Maui/BTCPayApp.Maui.csproj -f net10.0-android -c Release -o publish/android
+          dotnet publish BTCPayApp.Maui/BTCPayApp.Maui.csproj -f net10.0-android -c Release -o publish/android -v:n -bl:android.binlog
         env:
           ANDROID_SIGNING_PASSWORD: ${{ secrets.ANDROID_SIGNING_PASSWORD }}
+      - name: Upload Android build binlog (always)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-binlog
+          path: android.binlog
+          if-no-files-found: warn
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
