@@ -1,0 +1,86 @@
+@attribute [Route(Routes.WalletRecover)]
+@using BTCPayApp.Core.Services
+@inject MnemonicBackupService BackupService
+@inject NavigationManager Nav
+
+<PageTitle>Recover wallet</PageTitle>
+
+<section class="container py-4">
+    <h1 class="mb-3">Recover wallet from mnemonic</h1>
+
+    <div class="alert alert-warning mb-3">
+        <strong>This will replace the wallet on this device.</strong>
+        Make sure you have backed up the current mnemonic first if you
+        intend to keep using it elsewhere.
+    </div>
+
+    <p class="text-secondary">
+        Paste or type the 12 or 24 words from your other device, separated
+        by spaces. The wallet on this device will be replaced with one
+        derived from the recovered mnemonic — useful for hot-standby setups
+        where a second phone signs for the same Arkade wallet.
+    </p>
+
+    @if (_error is not null)
+    {
+        <Alert Type="danger" class="mb-3">@_error</Alert>
+    }
+
+    <div class="mb-3">
+        <label class="form-label" for="mnemonic">Mnemonic</label>
+        <textarea id="mnemonic"
+                  class="form-control mnemonic-input"
+                  rows="3"
+                  autocomplete="off"
+                  autocapitalize="none"
+                  spellcheck="false"
+                  placeholder="word1 word2 word3 ..."
+                  @bind="_input"
+                  @bind:event="oninput"></textarea>
+        <small class="form-text">12 or 24 words from the BIP-39 English wordlist.</small>
+    </div>
+
+    <div class="d-flex gap-2 flex-column flex-md-row">
+        <button class="btn btn-outline-secondary flex-fill" type="button" @onclick="Cancel" disabled="@_submitting">
+            Cancel
+        </button>
+        <button class="btn btn-primary flex-fill" type="button" @onclick="Submit" disabled="@(_submitting || string.IsNullOrWhiteSpace(_input))">
+            @(_submitting ? "Recovering..." : "Replace wallet")
+        </button>
+    </div>
+</section>
+
+<style>
+    .mnemonic-input { font-family: var(--btcpay-font-monospace, monospace); }
+</style>
+
+@code {
+    private string _input = "";
+    private string? _error;
+    private bool _submitting;
+
+    private async Task Submit()
+    {
+        _submitting = true;
+        _error = null;
+        try
+        {
+            await BackupService.ReplaceWithRecoveredAsync(_input);
+            Nav.NavigateTo(Routes.Dashboard + "?Success=Wallet%20recovered%20-%20re-registering%20with%20operator", forceLoad: true);
+        }
+        catch (ArgumentException ex)
+        {
+            _error = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            _error = $"Recovery failed: {ex.Message}";
+        }
+        finally
+        {
+            _submitting = false;
+        }
+    }
+
+    private void Cancel() => Nav.NavigateTo(Routes.Settings);
+}

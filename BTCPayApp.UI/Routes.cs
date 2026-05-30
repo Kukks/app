@@ -40,6 +40,7 @@ public static class Routes
     public const string Wallet = "/wallet";
     public const string WalletBackup = "/wallet/backup";
     public const string WalletBackupVerify = "/wallet/backup/verify";
+    public const string WalletRecover = "/wallet/recover";
     public const string WalletNetwork = "/wallet/network";
     public const string SignerStatus = "/wallet/signer";
 
