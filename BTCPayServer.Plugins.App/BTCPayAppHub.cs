@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
+using NArk.Hosting;
 using NBitcoin;
 using NBXplorer;
 using NBXplorer.DerivationStrategy;
@@ -98,6 +99,7 @@ public class BTCPayAppHub : Hub<IBTCPayAppHubClient>, IBTCPayAppHubServer
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ExplorerClient _explorerClient;
     private readonly BTCPayNetwork _network;
+    private readonly ArkNetworkConfig _arkNetworkConfig;
 
     public BTCPayAppHub(BTCPayNetworkProvider btcPayNetworkProvider,
         NBXplorerDashboard nbXplorerDashboard,
@@ -106,7 +108,8 @@ public class BTCPayAppHub : Hub<IBTCPayAppHubClient>, IBTCPayAppHubServer
         IFeeProviderFactory feeProviderFactory,
         ILogger<BTCPayAppHub> logger,
         UserManager<ApplicationUser> userManager,
-        NBXplorerConnectionFactory connectionFactory)
+        NBXplorerConnectionFactory connectionFactory,
+        ArkNetworkConfig arkNetworkConfig)
     {
         _nbXplorerDashboard = nbXplorerDashboard;
         _appState = appState;
@@ -115,6 +118,7 @@ public class BTCPayAppHub : Hub<IBTCPayAppHubClient>, IBTCPayAppHubServer
         _logger = logger;
         _userManager = userManager;
         _connectionFactory = connectionFactory;
+        _arkNetworkConfig = arkNetworkConfig;
         _network = btcPayNetworkProvider.BTC;
         _explorerClient =  _explorerClientProvider.GetExplorerClient(btcPayNetworkProvider.BTC);
 
@@ -346,5 +350,23 @@ public class BTCPayAppHub : Hub<IBTCPayAppHubClient>, IBTCPayAppHubServer
     public async Task<AppHandshakeResponse> Handshake(AppHandshake request)
     {
         return await _appState.Handshake(Context.ConnectionId, request);
+    }
+
+    public Task<ArkadeServerConfigDto> GetArkadeConfig()
+    {
+        // Hand the device the server-side Arkade network config verbatim — the
+        // values are sourced from the btcpay-arkade plugin's AddArkNetwork
+        // registration (preset for the BTCPay NetworkType, with an optional
+        // ark.json override merged in). NetworkType mirrors BTCPay's chain
+        // name so the device can label the inherited network.
+        return Task.FromResult(new ArkadeServerConfigDto(
+            ArkUri: _arkNetworkConfig.ArkUri,
+            ArkadeWalletUri: _arkNetworkConfig.ArkadeWalletUri,
+            BoltzUri: _arkNetworkConfig.BoltzUri,
+            ExplorerUri: _arkNetworkConfig.ExplorerUri,
+            EsploraUri: _arkNetworkConfig.EsploraUri,
+            ElectrumWsUri: _arkNetworkConfig.ElectrumWsUri,
+            ElectrumTcpUri: _arkNetworkConfig.ElectrumTcpUri,
+            NetworkType: _network.NBitcoinNetwork.ChainName.ToString()));
     }
 }

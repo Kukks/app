@@ -1,7 +1,9 @@
+using BTCPayApp.Core.BTCPayServer;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Models;
 using BTCPayApp.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
+using NArk.Hosting;
 using Xunit.Abstractions;
 
 namespace BTCPayApp.Tests;
@@ -65,23 +67,45 @@ public class MainnetPosSurfacesTests(ITestOutputHelper output)
 
         var op = node.App.Services.GetRequiredService<ArkadeOperatorConfig>();
 
-        // First-launch default: mutinynet (safe for accidental opens).
+        // First-launch default: mutinynet (safe for accidental opens). Nothing
+        // synced from a paired BTCPay store yet.
         Assert.Equal("mutinynet", await op.GetNetworkNameAsync());
         Assert.Null(await op.GetEndpointOverrideAsync());
+        Assert.Null(await op.GetServerConfigAsync());
 
-        // Persist a mainnet choice with a custom operator endpoint.
-        await op.SetAsync("mainnet", "https://operator.example/");
-        Assert.Equal("mainnet", await op.GetNetworkNameAsync());
+        // Persist a mainnet snapshot with a custom operator endpoint, as the
+        // sync service would when the paired store reports mainnet.
+        var mainnetDto = new ArkadeServerConfigDto(
+            ArkUri: "https://operator.example/",
+            ArkadeWalletUri: ArkNetworkConfig.Mainnet.ArkadeWalletUri,
+            BoltzUri: ArkNetworkConfig.Mainnet.BoltzUri,
+            ExplorerUri: ArkNetworkConfig.Mainnet.ExplorerUri,
+            EsploraUri: ArkNetworkConfig.Mainnet.EsploraUri,
+            ElectrumWsUri: ArkNetworkConfig.Mainnet.ElectrumWsUri,
+            ElectrumTcpUri: ArkNetworkConfig.Mainnet.ElectrumTcpUri,
+            NetworkType: "Mainnet");
+        await op.SetServerConfigAsync(mainnetDto);
+        Assert.Equal("Mainnet", await op.GetNetworkNameAsync());
         Assert.Equal("https://operator.example/", await op.GetEndpointOverrideAsync());
 
-        // ResolveAsync applies the override on top of mainnet defaults.
+        // ResolveAsync rebuilds the SDK config straight from the snapshot.
         var resolved = await op.ResolveAsync();
         Assert.Equal("https://operator.example/", resolved.ArkUri);
 
-        // Switching back to mutinynet with no override resolves to the bundled mutinynet defaults.
-        await op.SetAsync("mutinynet", null);
+        // Switching back to a mutinynet snapshot with the bundled defaults
+        // resolves to mutinynet's ArkUri.
+        var mutinyDto = new ArkadeServerConfigDto(
+            ArkUri: ArkNetworkConfig.Mutinynet.ArkUri,
+            ArkadeWalletUri: ArkNetworkConfig.Mutinynet.ArkadeWalletUri,
+            BoltzUri: ArkNetworkConfig.Mutinynet.BoltzUri,
+            ExplorerUri: ArkNetworkConfig.Mutinynet.ExplorerUri,
+            EsploraUri: ArkNetworkConfig.Mutinynet.EsploraUri,
+            ElectrumWsUri: ArkNetworkConfig.Mutinynet.ElectrumWsUri,
+            ElectrumTcpUri: ArkNetworkConfig.Mutinynet.ElectrumTcpUri,
+            NetworkType: "Signet");
+        await op.SetServerConfigAsync(mutinyDto);
         var resolvedMutiny = await op.ResolveAsync();
-        Assert.Equal(NArk.Hosting.ArkNetworkConfig.Mutinynet.ArkUri, resolvedMutiny.ArkUri);
+        Assert.Equal(ArkNetworkConfig.Mutinynet.ArkUri, resolvedMutiny.ArkUri);
     }
 
     [Fact]
@@ -146,8 +170,16 @@ public class MainnetPosSurfacesTests(ITestOutputHelper output)
         Assert.True(skipped.NotApplicable);
         Assert.True(skipped.AllPassed); // NotApplicable is treated as a pass for the POS gate.
 
-        // Switching to mainnet enables the gate.
-        await op.SetAsync("mainnet", null);
+        // Switching to mainnet (via a synced server snapshot) enables the gate.
+        await op.SetServerConfigAsync(new ArkadeServerConfigDto(
+            ArkUri: ArkNetworkConfig.Mainnet.ArkUri,
+            ArkadeWalletUri: ArkNetworkConfig.Mainnet.ArkadeWalletUri,
+            BoltzUri: ArkNetworkConfig.Mainnet.BoltzUri,
+            ExplorerUri: ArkNetworkConfig.Mainnet.ExplorerUri,
+            EsploraUri: ArkNetworkConfig.Mainnet.EsploraUri,
+            ElectrumWsUri: ArkNetworkConfig.Mainnet.ElectrumWsUri,
+            ElectrumTcpUri: ArkNetworkConfig.Mainnet.ElectrumTcpUri,
+            NetworkType: "Mainnet"));
 
         // Backup not verified AND walletId not yet present → all checks fail.
         var blocked = await preflight.EvaluateAsync();

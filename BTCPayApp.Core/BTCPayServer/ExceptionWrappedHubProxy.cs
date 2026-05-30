@@ -94,4 +94,9 @@ public class ExceptionWrappedHubProxy : IBTCPayAppHubServer
     {
         return await Wrap(async () => await _hubProxy.GetTransactions(identifiers));
     }
+
+    public async Task<ArkadeServerConfigDto> GetArkadeConfig()
+    {
+        return await Wrap(async () => await _hubProxy.GetArkadeConfig());
+    }
 }

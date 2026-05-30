@@ -387,7 +387,11 @@
         _config = await ConfigProvider.Get<BTCPayAppConfig>(BTCPayAppConfig.Key);
         _deviceId = await ConfigProvider.GetDeviceIdentifier();
         _backupVerifiedAt = await BackupService.GetBackupVerifiedAtAsync();
-        _networkName = await OperatorConfig.GetNetworkNameAsync();
+        // Show the network only after the device has synced one from the paired
+        // BTCPay store — pre-pair "we're still using the bundled default"
+        // shouldn't masquerade as a confirmed choice.
+        var serverConfig = await OperatorConfig.GetServerConfigAsync();
+        _networkName = serverConfig?.NetworkType ?? "Not synced";
 
         Model.Theme = UiState.Value.SelectedTheme;
     }

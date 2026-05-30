@@ -128,6 +128,12 @@ public static class StartupExtensions
         serviceCollection.AddSingleton<ArkWalletBootstrapService>();
         serviceCollection.AddSingleton<IHostedService>(sp => sp.GetRequiredService<ArkWalletBootstrapService>());
 
+        // Pulls the paired BTCPay store's Arkade network config off the SignalR
+        // hub on every connect and persists it locally. The device no longer
+        // picks a network — the plugin dictates it via GetArkadeConfig().
+        serviceCollection.AddSingleton<ArkadeConfigSyncService>();
+        serviceCollection.AddSingleton<IHostedService>(sp => sp.GetRequiredService<ArkadeConfigSyncService>());
+
         // SDK core services. Registers ArkHostedLifecycle as an IHostedService,
         // which starts the Sweeper/Batch/Intent/VTXO-sync background services.
         serviceCollection.AddArkCoreServices();

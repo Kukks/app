@@ -50,6 +50,12 @@ public interface IBTCPayAppHubServer
     Task<string> UpdatePsbt(string[] identifiers, string psbt);
     Task<Dictionary<string, CoinResponse[]>> GetUTXOs(string[] identifiers);
     Task<Dictionary<string, TxResp[]>> GetTransactions(string[] identifiers);
+
+    // Returns the paired BTCPay store's Arkade-plugin network configuration so
+    // the device can inherit it. The device must NOT pick its own network — if
+    // device and plugin diverge, signing fails silently. See
+    // ArkadeConfigSyncService for the device-side persist + sync.
+    Task<ArkadeServerConfigDto> GetArkadeConfig();
 }
 
 public class ServerEvent
