@@ -1,10 +1,12 @@
 using System;
+using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BTCPayApp.Core.BTCPayServer;
 using BTCPayServer.Plugins.ArkPayServer.Services;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.Scripting;
 using NBitcoin.Secp256k1;
@@ -22,7 +24,7 @@ namespace BTCPayServer.Plugins.App.Services;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Phase-1 dispatch: walks the currently-connected <em>master</em> devices known
+/// Dispatch model: walks the currently-connected <em>master</em> devices known
 /// to <see cref="BTCPayAppState"/> and tries each one until the device-side
 /// validation accepts the <paramref name="walletId"/>. The device throws an
 /// <see cref="InvalidOperationException"/> whose message starts with
@@ -32,21 +34,39 @@ namespace BTCPayServer.Plugins.App.Services;
 /// <c>KnowsWallet</c> hub method instead of invoking a signing op.
 /// </para>
 /// <para>
-/// This design works for the common single-user / single-device pairing without
-/// requiring a server-side <c>walletId → userId</c> mapping. Pure watch-only
-/// wallets never hit this code path: per NArk master,
+/// <b>MuSig2 session pinning.</b> Per NArk PR #113, the secret nonce that
+/// <see cref="GenerateNoncesAsync"/> generates is retained on the signing device
+/// indexed by the caller-supplied <paramref name="sessionId"/>, and
+/// <see cref="SignMusigAsync"/> consumes it under the same id. If a redundant
+/// signer setup (e.g. two phones with the same mnemonic, "hot standby" model)
+/// lets the two calls land on different devices, <c>SignMusig</c> on the second
+/// device throws because it has no record of the secret nonce — and worse, if
+/// both devices independently generated a nonce for the same session,
+/// completing the signature would leak the private key (MuSig2 nonce reuse).
+/// So when <see cref="GenerateNoncesAsync"/> succeeds we record which connection
+/// produced the nonce, and <see cref="SignMusigAsync"/> routes back to that
+/// exact connection — or fails clearly if it has gone away. Schnorr-only paths
+/// (<see cref="GetPubKeyAsync"/> / <see cref="SignAsync"/>) are stateless and
+/// still walk every master device.
+/// </para>
+/// <para>
+/// Failure modes the merchant should expect with hot standby:
+/// <list type="bullet">
+/// <item>If the pinned device disconnects between <c>GenerateNonces</c> and
+///   <c>SignMusig</c>, the round fails. The next batch round starts a fresh
+///   <c>GenerateNonces</c> on whichever device answers first — that's the
+///   "warm spare takes over for the next session" semantic.</item>
+/// <item>If the session pin TTL (<see cref="SessionPinTtl"/>) elapses before
+///   <c>SignMusig</c>, the round fails. Generous default (10 min) covers
+///   typical batch durations.</item>
+/// </list>
+/// </para>
+/// <para>
+/// Pure watch-only wallets never hit this code path: per NArk master,
 /// <see cref="NArk.Abstractions.Wallets.IWalletProvider"/> only wraps the
 /// transport for a wallet when <see cref="KnowsWalletAsync"/> returns true,
 /// so a wallet with no local secret AND no remote device that claims it
 /// resolves to a null signer (watch-only).
-/// </para>
-/// <para>
-/// The MuSig2 secret nonce never crosses this hub: per NArk PR #113,
-/// <see cref="GenerateNoncesAsync"/> returns only the <see cref="MusigPubNonce"/>
-/// and the device's local signer stores the secret half indexed by
-/// <paramref name="sessionId"/>; <see cref="SignMusigAsync"/> refers to it by
-/// the same sessionId. The cryptographic claim of remote signing — "private
-/// material never leaves the device" — holds end-to-end.
 /// </para>
 /// <para>
 /// Multi-tenant deployments (multiple BTCPay users each with a paired device
@@ -56,15 +76,34 @@ namespace BTCPayServer.Plugins.App.Services;
 /// </remarks>
 internal sealed class BTCPayAppDeviceProxy : IBTCPayAppDeviceProxy
 {
+    /// <summary>
+    /// How long a MuSig2 session pin survives without being consumed. A pin is
+    /// recorded on <c>GenerateNonces</c> success and removed on
+    /// <c>SignMusig</c> completion (success OR failure — the device-side nonce
+    /// store consumes the nonce on attempted use). The TTL is the safety net
+    /// for "GenerateNonces succeeded but SignMusig never came" — entries are
+    /// evicted lazily on next access past the cutoff.
+    /// </summary>
+    private static readonly TimeSpan SessionPinTtl = TimeSpan.FromMinutes(10);
+
     private readonly IHubContext<BTCPayAppHub, IBTCPayAppHubClient> _hubContext;
     private readonly BTCPayAppState _appState;
+    private readonly ILogger<BTCPayAppDeviceProxy> _logger;
+
+    // (walletId, sessionId) -> (connectionId, recordedAt). Populated by
+    // GenerateNoncesAsync, consumed by SignMusigAsync. ConcurrentDictionary
+    // (rather than IMemoryCache) so we own the eviction semantics directly:
+    // expired entries are pruned lazily on insert/lookup.
+    private readonly ConcurrentDictionary<(string WalletId, string SessionId), SessionPin> _sessionPins = new();
 
     public BTCPayAppDeviceProxy(
         IHubContext<BTCPayAppHub, IBTCPayAppHubClient> hubContext,
-        BTCPayAppState appState)
+        BTCPayAppState appState,
+        ILogger<BTCPayAppDeviceProxy> logger)
     {
         _hubContext = hubContext;
         _appState = appState;
+        _logger = logger;
     }
 
     public async Task<bool> KnowsWalletAsync(string walletId, CancellationToken cancellationToken = default)
@@ -94,14 +133,6 @@ internal sealed class BTCPayAppDeviceProxy : IBTCPayAppDeviceProxy
         CancellationToken cancellationToken = default)
         => ForwardAsync(walletId, client => client.GetPubKey(walletId, descriptor));
 
-    public Task<MusigPartialSignature> SignMusigAsync(
-        string walletId,
-        OutputDescriptor descriptor,
-        MusigContext context,
-        string sessionId,
-        CancellationToken cancellationToken = default)
-        => ForwardAsync(walletId, client => client.SignMusig(walletId, descriptor, context, sessionId));
-
     public Task<(ECXOnlyPubKey, SecpSchnorrSignature)> SignAsync(
         string walletId,
         OutputDescriptor descriptor,
@@ -109,13 +140,75 @@ internal sealed class BTCPayAppDeviceProxy : IBTCPayAppDeviceProxy
         CancellationToken cancellationToken = default)
         => ForwardAsync(walletId, client => client.Sign(walletId, descriptor, hash));
 
-    public Task<MusigPubNonce> GenerateNoncesAsync(
+    public async Task<MusigPubNonce> GenerateNoncesAsync(
         string walletId,
         OutputDescriptor descriptor,
         MusigContext context,
         string sessionId,
         CancellationToken cancellationToken = default)
-        => ForwardAsync(walletId, client => client.GenerateNonces(walletId, descriptor, context, sessionId));
+    {
+        if (string.IsNullOrEmpty(sessionId))
+            throw new ArgumentException("sessionId is required for MuSig2 nonce generation", nameof(sessionId));
+
+        var (connectionId, nonce) = await ForwardAndRecordAsync(
+            walletId,
+            client => client.GenerateNonces(walletId, descriptor, context, sessionId));
+
+        // Pin the session to the connection that produced (and now holds) the
+        // secret nonce. SignMusigAsync routes back to this exact connection.
+        PrunePinsOlderThan(DateTimeOffset.UtcNow - SessionPinTtl);
+        _sessionPins[(walletId, sessionId)] = new SessionPin(connectionId, DateTimeOffset.UtcNow);
+
+        return nonce;
+    }
+
+    public async Task<MusigPartialSignature> SignMusigAsync(
+        string walletId,
+        OutputDescriptor descriptor,
+        MusigContext context,
+        string sessionId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(walletId))
+            throw new ArgumentException("walletId is required", nameof(walletId));
+        if (string.IsNullOrEmpty(sessionId))
+            throw new ArgumentException("sessionId is required for MuSig2 signing", nameof(sessionId));
+
+        if (!_sessionPins.TryRemove((walletId, sessionId), out var pin))
+            throw new InvalidOperationException(
+                $"No device pin for MuSig2 session '{sessionId}' on wallet '{walletId}'. " +
+                "Either GenerateNonces was never called for this session, or its pin has expired. " +
+                "Retry the batch round.");
+
+        // Pin TTL check (defensive — PrunePinsOlderThan above is best-effort).
+        var age = DateTimeOffset.UtcNow - pin.RecordedAt;
+        if (age > SessionPinTtl)
+            throw new InvalidOperationException(
+                $"MuSig2 session pin for '{sessionId}' expired after {age.TotalMinutes:F1} minutes. " +
+                "Retry the batch round to generate a fresh nonce.");
+
+        // The pinned connection must still be a connected master. If it has
+        // dropped, we MUST fail here — falling through to the other master
+        // would ask a device that has no record of the secret nonce, OR worse
+        // a device that independently generated its own nonce for the same
+        // session (nonce reuse → key leak).
+        if (!_appState.Connections.TryGetValue(pin.ConnectionId, out var meta) || !meta.Master)
+        {
+            _logger.LogWarning(
+                "MuSig2 session '{SessionId}' for wallet '{WalletId}' was pinned to connection " +
+                "'{ConnectionId}' which has since disconnected. Failing the round; next batch will " +
+                "pin to whichever master device answers GenerateNonces first.",
+                sessionId, walletId, pin.ConnectionId);
+
+            throw new InvalidOperationException(
+                $"The BTCPayApp device that generated the MuSig2 nonce for session '{sessionId}' has " +
+                "disconnected before the batch round could complete. The signing nonce is lost. " +
+                "The next batch round will pick a new device — open the BTCPayApp and reconnect, then retry.");
+        }
+
+        var client = _hubContext.Clients.Client(pin.ConnectionId);
+        return await client.SignMusig(walletId, descriptor, context, sessionId);
+    }
 
     private System.Collections.Generic.List<string> MasterConnectionIds()
         => _appState.Connections
@@ -125,12 +218,18 @@ internal sealed class BTCPayAppDeviceProxy : IBTCPayAppDeviceProxy
 
     private async Task<T> ForwardAsync<T>(string walletId, Func<IBTCPayAppHubClient, Task<T>> call)
     {
+        var (_, result) = await ForwardAndRecordAsync(walletId, call);
+        return result;
+    }
+
+    private async Task<(string ConnectionId, T Result)> ForwardAndRecordAsync<T>(
+        string walletId,
+        Func<IBTCPayAppHubClient, Task<T>> call)
+    {
         if (string.IsNullOrEmpty(walletId))
             throw new ArgumentException("walletId is required", nameof(walletId));
 
-        // Snapshot the currently-connected master devices. BTCPayAppState
-        // enforces at-most-one master per user already, so this is the natural
-        // set of "signers that should hold the seed for an Arkade owner wallet".
+        // Snapshot the currently-connected master devices.
         var connectionIds = MasterConnectionIds();
 
         if (connectionIds.Count == 0)
@@ -144,25 +243,33 @@ internal sealed class BTCPayAppDeviceProxy : IBTCPayAppDeviceProxy
             try
             {
                 var client = _hubContext.Clients.Client(connectionId);
-                return await call(client);
+                var result = await call(client);
+                return (connectionId, result);
             }
             catch (Exception ex) when (IsWalletMismatch(ex))
             {
                 // Device-side validation: this connection owns a different
-                // wallet. Carry on to the next master connection — exactly
-                // one of them should own walletId.
+                // wallet. Carry on to the next master connection.
                 lastError = ex;
             }
         }
 
         // Every connected master device declined: surface the last (most
-        // recent) device-side error so the merchant sees the actual reason
-        // instead of a generic "not found".
+        // recent) device-side error so the merchant sees the actual reason.
         throw new InvalidOperationException(
             $"No connected BTCPayApp device owns wallet '{walletId}'. " +
             "Pair the device that holds this wallet's seed and retry. " +
             $"Last device response: {lastError?.Message ?? "(none)"}",
             lastError);
+    }
+
+    private void PrunePinsOlderThan(DateTimeOffset cutoff)
+    {
+        foreach (var entry in _sessionPins)
+        {
+            if (entry.Value.RecordedAt < cutoff)
+                _sessionPins.TryRemove(entry.Key, out _);
+        }
     }
 
     // The on-device ArkSignerService throws InvalidOperationException with a
@@ -173,4 +280,6 @@ internal sealed class BTCPayAppDeviceProxy : IBTCPayAppDeviceProxy
     private static bool IsWalletMismatch(Exception ex)
         => ex is InvalidOperationException
            && ex.Message.StartsWith("Refusing to sign for wallet", StringComparison.Ordinal);
+
+    private sealed record SessionPin(string ConnectionId, DateTimeOffset RecordedAt);
 }
