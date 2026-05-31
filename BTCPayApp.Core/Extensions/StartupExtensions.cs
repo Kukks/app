@@ -10,19 +10,14 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using NArk.Abstractions.Assets;
-using NArk.Abstractions.Blockchain;
-using NArk.Abstractions.Intents;
 using NArk.Abstractions.Safety;
 using NArk.Abstractions.Wallets;
-using NArk.Blockchain;
-using NArk.Core.Services;
 using NArk.Core.Transport;
-using NArk.Transport.RestClient;
 using NArk.Core.Wallet;
 using NArk.Hosting;
 using NArk.Safety.AsyncKeyedLock;
 using NArk.Storage.EfCore.Hosting;
+using NArk.Transport.RestClient;
 
 namespace BTCPayApp.Core.Extensions;
 
@@ -67,24 +62,47 @@ public static class StartupExtensions
     }
 
     /// <summary>
-    /// Wires the Arkade SDK (NArk) into the app: network config + transport, the
-    /// on-device owner wallet bootstrap, and the SDK core services. EF Core
-    /// storage (<c>AddArkEfCoreStorage</c>) is registered separately by the
-    /// caller and must already be present.
+    /// Wires NArk into the app for its <em>signer-only</em> role. The device
+    /// holds the HD seed and answers signing requests forwarded from the paired
+    /// BTCPay store via <see cref="ArkSignerService"/>; the watch-only btcpay-arkade
+    /// plugin on the server is the sole owner of wallet state (VTXO sync, batch
+    /// participation, intent generation, sweeping, boarding-UTXO polling).
+    /// <para>
+    /// We deliberately do NOT call <c>AddArkCoreServices()</c> or register the
+    /// boarding-sync poller / <see cref="NArk.Abstractions.Blockchain.IBitcoinBlockchain"/>
+    /// / <see cref="NArk.Abstractions.Intents.IIntentScheduler"/> / asset manager
+    /// here. Running those on the device duplicates work the server already does
+    /// for the same wallet and creates real coordination bugs: two sweepers
+    /// racing on a maturing VTXO, two batch managers calling
+    /// <c>GenerateNonces</c> against the same operator session, and (worst case)
+    /// MuSig2 nonce collisions across the device-local and server-mediated
+    /// signing flows that could leak the private key.
+    /// </para>
+    /// <para>
+    /// What the device DOES need from NArk: just enough to resolve the local
+    /// signer for an incoming hub-forwarded request — <see cref="IWalletProvider"/>
+    /// (composed automatically from <c>Bip39KeyProvider</c> per NArk #114),
+    /// <see cref="ISafetyService"/>, <see cref="IClientTransport"/> (for the
+    /// one-shot <c>GetServerInfoAsync</c> the bootstrap uses to derive the
+    /// BIP-86 coin type), and the EF Core storage that backs
+    /// <c>IWalletStorage</c>/<c>IContractStorage</c>. Everything else is
+    /// server-side.
+    /// </para>
     /// </summary>
     private static IServiceCollection ConfigureArkade(this IServiceCollection serviceCollection)
     {
+        // Merchant-selected network/operator, synced from the paired BTCPay store
+        // by ArkadeConfigSyncService below.
         serviceCollection.AddSingleton<ArkadeOperatorConfig>();
 
         // Lazy network resolve via factory. The first consumer of this singleton
-        // is typically the transport (during hosted-service start, after the
-        // migrator). But early DI traversal — e.g. when a test or UI code path
-        // resolves BTCPayConnectionManager before the host's hosted services
-        // start — can fire this factory before the Settings table exists. In
-        // that window "no setting persisted yet" and "schema not ready yet" are
-        // semantically the same: fall back to the bundled default. Once the
-        // host starts, every subsequent resolve reads the merchant's choice
-        // (the factory is a singleton, so this is a one-shot fallback).
+        // is typically the transport during hosted-service start, after the
+        // migrator. But early DI traversal — e.g. a test or UI code path
+        // resolving BTCPayConnectionManager before hosted services start — can
+        // fire this factory before the Settings table exists. In that window
+        // "no setting persisted yet" and "schema not ready yet" are semantically
+        // the same: fall back to the bundled default. Once the host starts,
+        // every subsequent resolve reads the merchant's actual choice.
         serviceCollection.AddSingleton<ArkNetworkConfig>(sp =>
         {
             try
@@ -97,10 +115,11 @@ public static class StartupExtensions
             }
         });
 
-        // Inline what AddArkRestTransport(config) does
-        // (submodules/NArk/NArk.Core/Hosting/ServiceCollectionExtensions.cs:203-220),
-        // but resolving the config via the factory above instead of taking a
-        // concrete instance. No NArk changes required.
+        // Inline of AddArkRestTransport(config), but resolving the config via the
+        // factory above instead of taking a concrete instance. The transport is
+        // here because ArkWalletBootstrapService.GetServerInfoAsync needs it to
+        // learn the network's coin type for the BIP-86 descriptor — it is NOT
+        // wired up for streaming operator events (no AddArkCoreServices below).
         serviceCollection.AddSingleton(sp =>
             new RestClientTransport(sp.GetRequiredService<ArkNetworkConfig>().ArkUri));
         serviceCollection.AddSingleton<IClientTransport>(sp =>
@@ -110,52 +129,33 @@ public static class StartupExtensions
             return new CachingClientTransport(inner, logger);
         });
 
-        // SDK infrastructure the core/background services resolve.
-        serviceCollection.AddSingleton<IIntentScheduler, SimpleIntentScheduler>();
+        // The minimum NArk surface needed to resolve a local IArkadeWalletSigner
+        // for an incoming hub-forwarded signing request. DefaultWalletProvider's
+        // ctor takes (IClientTransport, ISafetyService, IWalletStorage,
+        // IContractStorage); the storages come from AddArkEfCoreStorage which
+        // ConfigureBTCPayAppCore registered above.
         serviceCollection.AddSingleton<ISafetyService, AsyncSafetyService>();
-        serviceCollection.AddSingleton<IBitcoinBlockchain>(sp =>
-        {
-            var cfg = sp.GetRequiredService<ArkNetworkConfig>();
-            return new EsploraBlockchain(new Uri(cfg.ExplorerUri!.TrimEnd('/') + "/api/"));
-        });
         serviceCollection.AddSingleton<IWalletProvider, DefaultWalletProvider>();
-        serviceCollection.AddSingleton<IAssetManager, AssetManager>();
 
-        // Owner-wallet bootstrap MUST run before the NArk hosted lifecycle so the
-        // seed exists by the time the background services start. Hosted services
-        // start in registration order, so register it before AddArkCoreServices
-        // (which registers ArkHostedLifecycle).
+        // Owner-wallet bootstrap: generates the on-device mnemonic on first run
+        // and registers an HD ArkWalletInfo with NArk storage so DefaultWalletProvider
+        // can build a Bip39KeyProvider for it. Idempotent against the operator —
+        // the server-side btcpay-arkade plugin separately registers its watch-only
+        // mirror for the same descriptor (→ same walletId).
         serviceCollection.AddSingleton<ArkWalletBootstrapService>();
         serviceCollection.AddSingleton<IHostedService>(sp => sp.GetRequiredService<ArkWalletBootstrapService>());
 
         // Pulls the paired BTCPay store's Arkade network config off the SignalR
-        // hub on every connect and persists it locally. The device no longer
-        // picks a network — the plugin dictates it via GetArkadeConfig().
+        // hub on every connect and persists it locally. The device does not
+        // pick a network — the plugin dictates it via GetArkadeConfig().
         serviceCollection.AddSingleton<ArkadeConfigSyncService>();
         serviceCollection.AddSingleton<IHostedService>(sp => sp.GetRequiredService<ArkadeConfigSyncService>());
 
-        // SDK core services. Registers ArkHostedLifecycle as an IHostedService,
-        // which starts the Sweeper/Batch/Intent/VTXO-sync background services.
-        serviceCollection.AddArkCoreServices();
-
-        // Boarding (on-chain entry) sync. AddArkCoreServices/ArkHostedLifecycle do
-        // NOT start the boarding poller, so wire it here (matching the NArk README):
-        // BoardingUtxoSyncService queries the IBitcoinBlockchain (Esplora, above)
-        // for confirmed UTXOs at our boarding addresses and upserts them into VTXO
-        // storage; BoardingUtxoPollService is the IHostedService that runs it every
-        // 30s while unspent boarding VTXOs exist, so deposits get swept into the
-        // Arkade without manual intervention.
-        serviceCollection.AddSingleton<BoardingUtxoSyncService>();
-        serviceCollection.AddSingleton<BoardingUtxoPollService>();
-        serviceCollection.AddSingleton<IHostedService>(sp => sp.GetRequiredService<BoardingUtxoPollService>());
-
-        // On-demand boarding-address derivation for the owner wallet.
-        serviceCollection.AddSingleton<ArkadeWalletService>();
-
-        // Bridges remote-signing requests that the BTCPayServer companion plugin
-        // forwards over the SignalR hub down to the local IArkadeWalletSigner.
-        // The on-device seed never leaves this process — every call validates
-        // the requested walletId matches the owner wallet before signing.
+        // The signer + status surfaces. ArkSignerService bridges remote-signing
+        // requests that the BTCPayServer companion plugin forwards over the
+        // SignalR hub down to the local IArkadeWalletSigner. The on-device seed
+        // never leaves this process — every call validates the requested
+        // walletId matches the owner wallet before signing.
         serviceCollection.AddSingleton<ArkSignerService>();
         serviceCollection.AddSingleton<MnemonicBackupService>();
         serviceCollection.AddSingleton<SignerStatusService>();
