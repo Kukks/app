@@ -11,7 +11,8 @@ namespace BTCPayApp.Core.BTCPayServer;
 
 public class BTCPayAppServerClient(
     ILogger<BTCPayAppServerClient> _logger,
-    ArkSignerService _arkSignerService)
+    ArkSignerService _arkSignerService,
+    NArk.Core.Transport.IClientTransport _clientTransport)
     : IBTCPayAppHubClient
 {
     public event AsyncEventHandler<string>? OnNewBlock;
@@ -66,15 +67,36 @@ public class BTCPayAppServerClient(
     public Task<bool> KnowsWallet(string walletId)
         => _arkSignerService.KnowsWalletAsync(walletId);
 
-    public Task<ECPubKey> GetPubKey(string walletId, OutputDescriptor descriptor)
-        => _arkSignerService.GetPubKeyAsync(walletId, descriptor);
+    public async Task<string> GetPubKey(string walletId, string descriptor)
+        => Convert.ToHexString(
+            (await _arkSignerService.GetPubKeyAsync(walletId, await ParseDescriptor(descriptor))).ToBytes());
 
-    public Task<MusigPartialSignature> SignMusig(string walletId, OutputDescriptor descriptor, MusigContext context, string sessionId)
-        => _arkSignerService.SignMusigAsync(walletId, descriptor, context, sessionId);
+    public async Task<string> SignMusig(string walletId, string descriptor, string musigContext, string sessionId)
+        => Convert.ToHexString(
+            (await _arkSignerService.SignMusigAsync(
+                walletId, await ParseDescriptor(descriptor), MusigContextWire.Deserialize(musigContext), sessionId)).ToBytes());
 
-    public Task<(ECXOnlyPubKey, SecpSchnorrSignature)> Sign(string walletId, OutputDescriptor descriptor, uint256 hash)
-        => _arkSignerService.SignAsync(walletId, descriptor, hash);
+    public async Task<SignResponse> Sign(string walletId, string descriptor, string hash)
+    {
+        var (xOnlyPubKey, signature) = await _arkSignerService.SignAsync(
+            walletId, await ParseDescriptor(descriptor), uint256.Parse(hash));
+        return new SignResponse
+        {
+            XOnlyPubKey = Convert.ToHexString(xOnlyPubKey.ToBytes()),
+            Signature = Convert.ToHexString(signature.ToBytes())
+        };
+    }
 
-    public Task<MusigPubNonce> GenerateNonces(string walletId, OutputDescriptor descriptor, MusigContext context, string sessionId)
-        => _arkSignerService.GenerateNoncesAsync(walletId, descriptor, context, sessionId);
+    public async Task<string> GenerateNonces(string walletId, string descriptor, string musigContext, string sessionId)
+        => Convert.ToHexString(
+            (await _arkSignerService.GenerateNoncesAsync(
+                walletId, await ParseDescriptor(descriptor), MusigContextWire.Deserialize(musigContext), sessionId)).ToBytes());
+
+    // The wire carries descriptors as strings; parsing needs the operator's
+    // network, which the cached transport already knows.
+    private async Task<OutputDescriptor> ParseDescriptor(string descriptor)
+    {
+        var terms = await _clientTransport.GetServerInfoAsync(CancellationToken.None);
+        return OutputDescriptor.Parse(descriptor, terms.Network);
+    }
 }

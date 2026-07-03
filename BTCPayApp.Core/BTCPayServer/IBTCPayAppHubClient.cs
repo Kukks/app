@@ -29,11 +29,20 @@ public interface IBTCPayAppHubClient
     // signing. The MuSig2 secret nonce never crosses this wire: GenerateNonces
     // returns only the public half, and SignMusig refers to the secret half
     // by the same sessionId the local signer indexed it under.
+    //
+    // Wire encoding: primitives only. SignalR's JSON protocol cannot move the
+    // NBitcoin/secp types these operations speak (and a plugin must not
+    // reconfigure BTCPay's global SignalR protocol), so descriptors travel as
+    // descriptor strings, hashes as uint256 hex, keys/nonces/signatures as hex
+    // bytes (33B compressed pubkey, 32B x-only key, 64B Schnorr signature,
+    // 66B MuSig public nonce, 32B MuSig partial signature), and the MuSig2
+    // session as a MusigContextWire blob. BTCPayAppDeviceProxy encodes,
+    // BTCPayAppServerClient decodes back into the typed ArkSignerService calls.
     Task<bool> KnowsWallet(string walletId);
-    Task<ECPubKey> GetPubKey(string walletId, OutputDescriptor descriptor);
-    Task<MusigPartialSignature> SignMusig(string walletId, OutputDescriptor descriptor, MusigContext context, string sessionId);
-    Task<(ECXOnlyPubKey, SecpSchnorrSignature)> Sign(string walletId, OutputDescriptor descriptor, uint256 hash);
-    Task<MusigPubNonce> GenerateNonces(string walletId, OutputDescriptor descriptor, MusigContext context, string sessionId);
+    Task<string> GetPubKey(string walletId, string descriptor);
+    Task<string> SignMusig(string walletId, string descriptor, string musigContext, string sessionId);
+    Task<SignResponse> Sign(string walletId, string descriptor, string hash);
+    Task<string> GenerateNonces(string walletId, string descriptor, string musigContext, string sessionId);
 }
 
 //methods available on the hub in the server
@@ -56,6 +65,14 @@ public interface IBTCPayAppHubServer
     // device and plugin diverge, signing fails silently. See
     // ArkadeConfigSyncService for the device-side persist + sync.
     Task<ArkadeServerConfigDto> GetArkadeConfig();
+}
+
+// BIP-340 signature over the wire: 32-byte x-only pubkey + 64-byte Schnorr
+// signature, both hex.
+public class SignResponse
+{
+    public string XOnlyPubKey { get; set; } = null!;
+    public string Signature { get; set; } = null!;
 }
 
 public class ServerEvent

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BTCPayApp.Core.BTCPayServer;
+using BTCPayApp.Core.Helpers;
 using BTCPayServer.Plugins.ArkPayServer.Services;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
@@ -131,14 +132,16 @@ internal sealed class BTCPayAppDeviceProxy : IBTCPayAppDeviceProxy
         string walletId,
         OutputDescriptor descriptor,
         CancellationToken cancellationToken = default)
-        => ForwardAsync(walletId, client => client.GetPubKey(walletId, descriptor));
+        => ForwardAsync(walletId, async client =>
+            ECPubKey.Create(Convert.FromHexString(await client.GetPubKey(walletId, descriptor.ToString()))));
 
     public Task<(ECXOnlyPubKey, SecpSchnorrSignature)> SignAsync(
         string walletId,
         OutputDescriptor descriptor,
         uint256 hash,
         CancellationToken cancellationToken = default)
-        => ForwardAsync(walletId, client => client.Sign(walletId, descriptor, hash));
+        => ForwardAsync(walletId, async client =>
+            DecodeSignResponse(await client.Sign(walletId, descriptor.ToString(), hash.ToString())));
 
     public async Task<MusigPubNonce> GenerateNoncesAsync(
         string walletId,
@@ -150,16 +153,17 @@ internal sealed class BTCPayAppDeviceProxy : IBTCPayAppDeviceProxy
         if (string.IsNullOrEmpty(sessionId))
             throw new ArgumentException("sessionId is required for MuSig2 nonce generation", nameof(sessionId));
 
-        var (connectionId, nonce) = await ForwardAndRecordAsync(
+        var contextBlob = MusigContextWire.Serialize(context);
+        var (connectionId, nonceHex) = await ForwardAndRecordAsync(
             walletId,
-            client => client.GenerateNonces(walletId, descriptor, context, sessionId));
+            client => client.GenerateNonces(walletId, descriptor.ToString(), contextBlob, sessionId));
 
         // Pin the session to the connection that produced (and now holds) the
         // secret nonce. SignMusigAsync routes back to this exact connection.
         PrunePinsOlderThan(DateTimeOffset.UtcNow - SessionPinTtl);
         _sessionPins[(walletId, sessionId)] = new SessionPin(connectionId, DateTimeOffset.UtcNow);
 
-        return nonce;
+        return new MusigPubNonce(Convert.FromHexString(nonceHex));
     }
 
     public async Task<MusigPartialSignature> SignMusigAsync(
@@ -187,17 +191,17 @@ internal sealed class BTCPayAppDeviceProxy : IBTCPayAppDeviceProxy
                 $"MuSig2 session pin for '{sessionId}' expired after {age.TotalMinutes:F1} minutes. " +
                 "Retry the batch round to generate a fresh nonce.");
 
-        // The pinned connection must still be a connected master. If it has
-        // dropped, we MUST fail here — falling through to the other master
-        // would ask a device that has no record of the secret nonce, OR worse
-        // a device that independently generated its own nonce for the same
-        // session (nonce reuse → key leak).
-        if (!_appState.Connections.TryGetValue(pin.ConnectionId, out var meta) || !meta.Master)
+        // The pinned connection must still be connected. If it has dropped, we
+        // MUST fail here — falling through to another device would ask one
+        // that has no record of the secret nonce, OR worse a device that
+        // independently generated its own nonce for the same session (nonce
+        // reuse → key leak).
+        if (!_appState.Connections.ContainsKey(pin.ConnectionId))
         {
             _logger.LogWarning(
                 "MuSig2 session '{SessionId}' for wallet '{WalletId}' was pinned to connection " +
                 "'{ConnectionId}' which has since disconnected. Failing the round; next batch will " +
-                "pin to whichever master device answers GenerateNonces first.",
+                "pin to whichever device answers GenerateNonces first.",
                 sessionId, walletId, pin.ConnectionId);
 
             throw new InvalidOperationException(
@@ -207,7 +211,18 @@ internal sealed class BTCPayAppDeviceProxy : IBTCPayAppDeviceProxy
         }
 
         var client = _hubContext.Clients.Client(pin.ConnectionId);
-        return await client.SignMusig(walletId, descriptor, context, sessionId);
+        var partialHex = await client.SignMusig(
+            walletId, descriptor.ToString(), MusigContextWire.Serialize(context), sessionId);
+        return new MusigPartialSignature(Convert.FromHexString(partialHex));
+    }
+
+    private static (ECXOnlyPubKey, SecpSchnorrSignature) DecodeSignResponse(SignResponse response)
+    {
+        if (!ECXOnlyPubKey.TryCreate(Convert.FromHexString(response.XOnlyPubKey), out var xOnlyPubKey))
+            throw new InvalidOperationException("Device returned an invalid x-only public key.");
+        if (!SecpSchnorrSignature.TryCreate(Convert.FromHexString(response.Signature), out var signature))
+            throw new InvalidOperationException("Device returned an invalid BIP-340 signature.");
+        return (xOnlyPubKey, signature);
     }
 
     // Every connected device is probe-eligible. The old LDK-era master/slave
@@ -237,7 +252,7 @@ internal sealed class BTCPayAppDeviceProxy : IBTCPayAppDeviceProxy
         if (string.IsNullOrEmpty(walletId))
             throw new ArgumentException("walletId is required", nameof(walletId));
 
-        // Snapshot the currently-connected master devices.
+        // Snapshot the currently-connected devices.
         var connectionIds = EligibleConnectionIds();
 
         if (connectionIds.Count == 0)
