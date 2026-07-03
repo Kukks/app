@@ -1,73 +1,151 @@
-﻿# BTCPay ~~Server~~ App
+# BTCPay ~~Server~~ App
 
 ## Introduction
 
-BTCPay Server is an incredibly successful self-hosted, free, open-source payment processor for Bitcoin. 
-It allows anyone to install in on a server and start accepting payments with no middlemen.
-Setting up a bitcoin payment method is relatively simple, you can import an existing one or you can generate a new one, but there is absolutely no need to expose your private keys to the server.
-This enabled BTCPay Server to become a multi-merchant multi-store solution with minimal trust required. 
-But Bitcoin payments in the traditional sense are currently not very feasible for many commerce use-cases with today's realities. 
+BTCPay Server is an incredibly successful self-hosted, free, open-source payment processor for Bitcoin.
+It allows anyone to install it on a server and start accepting payments with no middlemen.
+Setting up a bitcoin payment method is relatively simple: you import an existing wallet or generate a new one, and there is absolutely no need to expose your private keys to the server.
+The server only watches the chain and verifies payments — it cannot spend.
+This watch-only model is what enabled BTCPay Server to become a multi-merchant, multi-store solution with minimal trust required.
 
-Enter the Lightning Network.
-BTCPay Server has supported Lightning Network payments since 2018, and it has been a game-changer for many merchants.
-It allows for instant, low-fee payments, and it is a perfect fit for many commerce use-cases. 
-Our support is built through a flexible abstraction layer, BTCPayServer.Lightning, which allows us to support multiple Lightning Network implementations.
-In fact, we support all, including virtual ones like Strike, Blink, or remote interfaces that also act as another abstraction layer like LNDHub or Nostr Wallet Connect.
+But plain on-chain payments are not very feasible for many commerce use-cases: confirmations are slow and fees are unpredictable.
+For years the answer was the Lightning Network, and a previous incarnation of this app ran an entire Lightning node on the device — an LDK-based node with channels, liquidity management, versioned state backups and a master/slave election between paired devices.
+That architecture is gone.
+Lightning's requirements — hot keys that must be constantly online, channel state that must never fork, backups that must capture every state update — were fundamentally at odds with the watch-only trust model that made BTCPay's on-chain support so successful.
 
-However the Lightning Network comes with a set of challenges. It introduces a requirement for private keys to be constantly available, which is a security and regulatory risk for shared server operators.
-It also introduces a new set of challenges for the user experience, such as the need to manage channels, liquidity, and the need to be online to receive payments.
-Backups are also a challenge, as they are not as simple as backing up a single private key and requires constant state updates for every operation.
+The app is now built on [Arkade](https://docs.arkadeos.com/).
+Arkade gives us instant payments while restoring the property we never wanted to give up: the server holds no keys, and the whole wallet is recoverable from a single BIP-39 mnemonic.
 
-## Our Visions
+## What Arkade changes
 
-We believe we can ease these challenges by providing a seamless experience for merchants, in a way that merchants can experience Lightning closer to the ease of on-chain wallet management.
-We are building a new product, BTCPay App, which is a cross-platform application that has two main goals:
-* a smooth and rapid onboarding user interface for merchants to accept and manage payments in-person
-* a seamless experience for merchants to enable the use of Lightning Network for their stores through a custom implementation of Lightning.
+With Arkade, funds are controlled by an owner wallet whose seed lives only on the merchant's device.
+Customers pay to an Arkade address, payments arrive as Arkade transactions, and the operator periodically anchors settlement on-chain in batches via commitment transactions.
+From the merchant's perspective there are no channels to open, no liquidity to manage, and no state to continuously back up — the mnemonic is the backup.
 
-## The User Interface
+The trust split mirrors BTCPay's on-chain model:
 
-The user interface is designed to be simple and intuitive, with a focus on the most common operations a merchant would need to perform.
-It is designed to be used in-person, with a focus on mobile devices, but it can also be used on desktops.
-The onboarding experience is meant to be as smooth as possible, with minimal configuration required to start accepting payments.
-Shared server operators, which we call "Ambassadors", can direct users to this application through invitation links, that will install, and automatically configure all necessary settings to start accepting payments.
+* The **device** is the Arkade owner wallet and the signer. Key material is generated on the device and never leaves it.
+* The **server** is watch-only. It constructs and tracks Arkade transactions for the store, and whenever a signature is needed it asks a paired device over a real-time connection.
 
-The user interface is built using Blazor. It allows us to build re-usable components that can be re-used across all platforms and also BTCPay Server.
-The host application for desktop is Photino for desktop, Maui for mobile, and Blazor Server for web access.
+## The user interface
 
-## The Lightning Node
+The user interface is designed to be simple and intuitive, with a focus on the most common operations a merchant would need to perform in-person.
+It is built using Blazor, which allows us to build re-usable components shared across all platforms and BTCPay Server itself.
+The host application is Photino for desktop, MAUI for mobile (Android/iOS), and Blazor Server for web access and development.
+Onboarding is meant to be as smooth as possible: shared-server hosts can direct users to the application through invitation links that install and automatically configure everything needed to start accepting payments.
 
-Built using LDK (Lightning Development Kit), our custom implementation of Lightning is designed to be a seamless experience for merchants.
-It is designed to be a non-custodial solution, where the merchant generates an onchain wallet and subsequently a lightning node on-device.
-BTCPay Server is used as a backend to provide the necessary information for the node to function. 
-The node utilizes the aforementioned abstraction layer to communicate with BTCPay Server,and hooks into the payment processing flow 
-The node stores and backs up all its data inside BTCPay Server against a user account.
+## The owner wallet (device)
 
-## Backup
-Using the onchain mnemonic seed, we derive a private key, that is used as an encryption key. This encryption key is used to encrypt all backup data before transporting it to BTCPay Server.
-The backup data is stored in a way that it can be easily restored on any device, and it is encrypted in a way that only the user can decrypt it.
-Therefore, when you are restoring your backup, you will need to provide the mnemonic seed, or the derived private key to decrypt the backup data.
+`ArkWalletBootstrapService` (in `BTCPayApp.Core/Services`) stands up the owner wallet:
 
-All data that is backed up is versioned. When an item is created, it is assigned a version of  0. When an item is updated, the version is incremented by 1. When an item is deleted, the version is incremented by 1. 
-The backups on BTCPay Server also store the version to ensure no older version of the data is uploaded. Only the latest variant is persisted.
+* On first run it generates a BIP-39 mnemonic and persists it locally via `ConfigProvider` under the `ark:owner:mnemonic` key. The key is stored with backup disabled — the seed is never synced to the server and never leaves the device.
+* It registers the wallet with the NArk SDK's `IWalletStorage` as an HD wallet (BIP-86 wildcard account descriptor), built exactly as the SDK's `WalletFactory` builds it. The resulting wallet id is tracked under `ark:owner:walletid`.
+* Registration needs to know the network (to pick the BIP-86 coin type), which comes from the paired server. It therefore runs off the startup path on a 10-second retry loop — an unreachable server can never block or crash app startup.
 
-WHen data that is meant to be backup up is persisted, an SQL trigger is used to create an outbox record. This record is then picked up by the backup service, and the data is uploaded to BTCPay Server.
+The service is idempotent: on subsequent starts the existing mnemonic is reused and the wallet is only re-registered if NArk storage has lost it.
 
-## Synchronization 
-Since the backup can be restored and is constantly updated, a user may have multiple devices paired to the same user account of BTCPay Server. 
-This means this user is essentially running the same node on multiple devices. However, this is not possible, and any attempt to do this will result in a catastrophic failure and loss of funds.
-To prevent this, we are using a master/slave model, where only one device can be the master, and all other devices are slaves at any given moment.
-The master device is the one that can operate the wallet, and is the only one that can update the backup state on BTCPay Server. All other devices are slaves, and they can only read the backup state, and they do this occassionally.
-Every app instance has a unique identifier, and this is used by BTCPay Server to determine who the current master is. A master device may only switch if the current master device signals to BTCPay Server that it is no longer the master. By doing so, it implies that the server has received the latest state of the backup, and it is safe to switch to another device.
-On load of any app instance, upon connecting to BTCPay Server, the app will first synchronize all data from the server, and then attempt to become the master.
-If for some reason the app is unable to maintain a connection while being the master, it can send the  backup state and use that as a signal to not be the master any more.
+## The signer (device)
 
-A slave device may not be able to directly operate a wallet, but it can still act as an interface to these operations. For example, a slave device can still generate invoices, process refunds, and view balances. These commands are simply proxies to the master device, which will execute them on behalf of the slave device.
+`ArkSignerService` is the only component that touches the seed for signing.
+It validates that every request targets the owner wallet — a request for any other wallet id is refused — and then exposes a small signing surface:
+
+* `KnowsWallet` — does this device hold the wallet with the given id?
+* `GetPubKey` — derive a public key for a descriptor.
+* `Sign` — produce a Schnorr signature.
+* `SignMusig` / `GenerateNonces` — the two halves of MuSig2 signing, correlated by a session id.
+
+These methods are exposed to the server over the SignalR hub via `BTCPayAppServerClient`: the server asks, the device answers, and private keys never move.
+
+## The server side: watch-only by design
+
+On the server, two plugins cooperate:
+
+* `BTCPayServer.Plugins.App` (this repository) hosts the SignalR hub at `hub/btcpayapp` and everything device-facing.
+* `BTCPayServer.Plugins.ArkPayServer` (the Arkade plugin, `submodules/btcpay-arkade`) provides the Arkade wallet, payment method and operator integration. It is a declared plugin dependency of the App plugin.
+
+The bridge between them is `BTCPayAppDeviceProxy`, the App plugin's implementation of the Arkade plugin's `IBTCPayAppDeviceProxy : IRemoteSignerTransport` contract.
+When the Arkade plugin needs a signature, the proxy forwards the call to a connected master device over the hub.
+When a store pairs a watch-only wallet by account descriptor, the server probes connected devices with `KnowsWallet` to confirm one of them actually holds it.
+
+The store wallet itself never gains signing capability: the server can derive addresses, watch for payments and assemble transactions, but the final say is always the device's.
+
+### Plugin load contexts
+
+Because the signer contract crosses a plugin boundary, .NET assembly identity matters: every assembly on the App↔Arkade seam (`NArk.*`, `NBitcoin.Secp256k1`) must resolve in exactly one plugin load context, or the cross-plugin `IRemoteSignerTransport` implementation fails to type-load.
+Host-owned assemblies are shared from the host; Arkade-owned ones live only in the Arkade plugin's folder, and the App plugin reaches them through its declared plugin dependency.
+This is why the setup script publishes both plugins and then prunes duplicate DLLs from their bin folders — see the repository README.
+
+## MuSig2 nonce sessions
+
+MuSig2 signing happens in two steps — generate nonces, then sign — and its security depends on the secret nonce: it must stay wherever it was generated, and it must never be used twice.
+Reusing a MuSig2 nonce leaks the private key.
+
+The device proxy therefore pins every nonce session to the exact SignalR connection that created it.
+`GenerateNonces` records a pin keyed by (wallet id, session id) pointing at the connection id that answered; `SignMusig` for that session consumes the pin and must be served by that same connection.
+If the pinned device has disconnected, or a different device tries to complete the session, the call fails and the flow restarts with fresh nonces.
+Pins are single-use and expire after a short window.
+
+The consequence is that the secret nonce never crosses the wire, and no combination of reconnects or standby devices can trick the system into completing a session with a mismatched or reused nonce.
+
+## Configuration sync
+
+The device does not choose its own network — it inherits it from the paired BTCPay store.
+`ArkadeConfigSyncService` listens for the hub's Connected event, calls `GetArkadeConfig()` on the server and persists the resulting `ArkNetworkConfig` locally.
+Before any server is paired, `ArkConfiguration.Resolve` falls back to a default network (mutinynet); mainnet, mutinynet (signet) and regtest are resolvable by name.
+
+This means a device paired to a regtest store behaves as a regtest wallet, and re-pairing against a mainnet store switches it — the server dictates, the device follows.
+
+## Signer health and mainnet preflight
+
+Because the store depends on the device for every signature, the device's health is a first-class surface.
+`SignerStatusService` condenses it into three levels:
+
+* **Unsafe** — no mnemonic or no registered owner wallet; the device cannot sign at all.
+* **Degraded** — the hub is disconnected or the mnemonic backup has not been verified.
+* **Healthy** — wallet registered, hub connected, backup verified.
+
+The status (plus network, owner wallet id, last signature and last error) is shown at `/wallet/signer` in the app.
+
+`MainnetPreflightService` turns this into a hard gate: on mainnet, the point-of-sale flow is blocked until the mnemonic is backed up and verified, the device is paired with the hub connected, and the owner wallet is registered with the operator.
+On any other network the preflight reports "not applicable" so testnet and regtest demos are never gated.
+
+## Backup and recovery
+
+The backup is the mnemonic — nothing else.
+There is no channel state, no versioned outbox, no encrypted state sync to the server: the VSS-style backup machinery of the Lightning era has no equivalent here because nothing beyond the seed needs backing up.
+
+`MnemonicBackupService` drives a manual backup-and-verify flow at `/wallet/backup` (with verification at `/wallet/backup/verify`).
+Until the user proves they have written the words down, the signer reports Degraded and the mainnet preflight fails.
+
+Recovery lives at `/wallet/recover`: entering a mnemonic replaces the local seed and clears the tracked wallet id, so the bootstrap service re-registers the recovered wallet on its next pass.
+
+## Hot standby
+
+Recovery doubles as a hot-standby mechanism: a second device can be paired against the same Arkade owner wallet by recovering the same mnemonic on it.
+Both devices then register the same wallet, and the server forwards signing to whichever one is connected.
+
+In the Lightning era this was catastrophic — two nodes sharing channel state would fork it and lose funds, which is why the old architecture needed a master/slave election.
+With Arkade there is no state to fork, only keys, and the one genuinely dangerous shared-state operation — MuSig2 nonce sessions — is made safe by connection pinning: a session started on one device can only ever be completed by that device.
 
 ## Connectivity
-BTCPay App utilizes Signalr, a real-time communication library, to communicate with BTCPay Server. This allows for real-time two-way updates.
-It also utilizes the Greenfield API, the all-inclusive api for BTCPay Server. For backups, we use a VSS compatible REST API, allowing future work to backup the lightning node to various other services.
 
-## Channels
-We envision that Ambassadors will run a lightning node as part of the Server, and will offer channels to its users. BTCPay Server notifies the app upon connection of its lightning node, so that they may establish a persistent connection. We believe ambassdaors will offer inbound channels to its users.
-We've also introduced LSP support, notably JIT channel creation, which allows the app to generate payment requests routes through LSPs who will automate channel management on demand. We also plan to have ahead of time channel purchases to provide upfront, cheaper liquidity to the user.
+The app maintains a single real-time SignalR connection to the server's `hub/btcpayapp` endpoint, established by the connection manager against the paired account's base URI.
+Everything device-facing flows over it in both directions: configuration sync, the `KnowsWallet` pairing probe, and every signing call the store wallet delegates.
+The connection state feeds directly into the signer health level — a disconnected hub means a Degraded signer, because the store cannot reach its signer at all.
+
+## The payment flow
+
+End to end, a merchant goes live like this:
+
+1. Pair the app with a BTCPay Server: Connect, enter the server URL, register or log in.
+2. The device bootstraps its owner wallet automatically and inherits the server's network.
+3. In BTCPay, the store's Arkade wallet initial setup offers "Pair a watch-only wallet"; the merchant pastes the device's account descriptor (shown at `/wallet/signer`).
+4. The server verifies a connected device knows the wallet, and the store wallet is created watch-only with signing delegated to the device.
+5. A point-of-sale charge produces an invoice with an Arkade address (plus a boarding address for on-chain funds).
+6. The customer pays an Arkade transaction and the invoice settles.
+
+## What is not here yet
+
+* **Multi-tenant pairing** — the current model is one store, one user, one device.
+* **Unilateral exit UX** — there is no in-app flow for exiting unilaterally from the operator.
+* **Lightning** — only what the Arkade plugin surfaces through Boltz swaps; the app itself has no other Lightning flows.
