@@ -24,7 +24,7 @@ namespace BTCPayServer.Plugins.App.Services;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Dispatch model: walks the currently-connected <em>master</em> devices known
+/// Dispatch model: walks the currently-connected devices known
 /// to <see cref="BTCPayAppState"/> and tries each one until the device-side
 /// validation accepts the <paramref name="walletId"/>. The device throws an
 /// <see cref="InvalidOperationException"/> whose message starts with
@@ -47,7 +47,7 @@ namespace BTCPayServer.Plugins.App.Services;
 /// produced the nonce, and <see cref="SignMusigAsync"/> routes back to that
 /// exact connection — or fails clearly if it has gone away. Schnorr-only paths
 /// (<see cref="GetPubKeyAsync"/> / <see cref="SignAsync"/>) are stateless and
-/// still walk every master device.
+/// still walk every connected device.
 /// </para>
 /// <para>
 /// Failure modes the merchant should expect with hot standby:
@@ -110,7 +110,7 @@ internal sealed class BTCPayAppDeviceProxy : IBTCPayAppDeviceProxy
     {
         if (string.IsNullOrEmpty(walletId)) return false;
 
-        foreach (var connectionId in MasterConnectionIds())
+        foreach (var connectionId in EligibleConnectionIds())
         {
             try
             {
@@ -210,9 +210,17 @@ internal sealed class BTCPayAppDeviceProxy : IBTCPayAppDeviceProxy
         return await client.SignMusig(walletId, descriptor, context, sessionId);
     }
 
-    private System.Collections.Generic.List<string> MasterConnectionIds()
+    // Every connected device is probe-eligible. The old LDK-era master/slave
+    // model is gone — nothing device-side sends DeviceMasterSignal anymore, so
+    // filtering on ConnectedInstance.Master left this list permanently empty
+    // and every wallet silently degraded to watch-only. Authorization rests on
+    // the device actually holding the keys: ArkSignerService refuses any
+    // walletId that is not its locally-registered owner wallet, and a device
+    // without the mnemonic cannot produce a valid signature. This is also what
+    // lets a hot-standby second device answer. Multi-tenant scoping (probe only
+    // devices of users with access to the wallet's store) is a follow-up.
+    private System.Collections.Generic.List<string> EligibleConnectionIds()
         => _appState.Connections
-            .Where(kv => kv.Value.Master)
             .Select(kv => kv.Key)
             .ToList();
 
@@ -230,7 +238,7 @@ internal sealed class BTCPayAppDeviceProxy : IBTCPayAppDeviceProxy
             throw new ArgumentException("walletId is required", nameof(walletId));
 
         // Snapshot the currently-connected master devices.
-        var connectionIds = MasterConnectionIds();
+        var connectionIds = EligibleConnectionIds();
 
         if (connectionIds.Count == 0)
             throw new InvalidOperationException(
