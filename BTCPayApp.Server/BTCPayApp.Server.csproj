@@ -5,6 +5,10 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    <!-- .NET 10 only ships _framework/blazor.server.js as a static web asset when the
+         project itself contains a .razor file; all components live in BTCPayApp.UI, so
+         force inclusion or the script 404s and the circuit never starts. -->
+    <RequiresAspNetWebAssets>true</RequiresAspNetWebAssets>
   </PropertyGroup>
 
   <ItemGroup>

@@ -22,7 +22,9 @@
     <link href="_content/BTCPayApp.UI/css/fonts.css" rel="stylesheet" asp-append-version="true"/>
     <link href="_content/BTCPayApp.UI/css/theme.css" rel="stylesheet" asp-append-version="true"/>
     <link href="_content/BTCPayApp.UI/css/global.css" rel="stylesheet" asp-append-version="true"/>
-    <link href="_content/BTCPayApp.UI/BTCPayApp.UI.bundle.scp.css" rel="stylesheet" />
+    @* .NET 10 no longer serves the RCL's scoped-css bundle at _content/BTCPayApp.UI/…;
+       the host-level bundle imports it instead. *@
+    <link href="BTCPayApp.Server.styles.css" rel="stylesheet" asp-append-version="true" />
     <link id="CustomThemeLinkTag" />
     <component type="typeof(HeadOutlet)" render-mode="ServerPrerendered"/>
 </head>
