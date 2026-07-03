@@ -24,6 +24,10 @@ namespace BTCPayServer.Plugins.App.API;
 [ApiController]
 [Authorize(AuthenticationSchemes = AuthenticationSchemes.Greenfield)]
 [Route("btcpayapp")]
+// Token-authenticated device API, not a browser UI surface: opt out of the global
+// UIControllerAntiforgeryTokenAttribute (btcpayserver Startup), which otherwise 400s
+// every non-GET request from the app because this controller derives from Controller.
+[IgnoreAntiforgeryToken]
 public partial class AppApiController(
     IHttpContextAccessor httpContextAccessor,
     GreenfieldUsersController greenfieldUsersController,
