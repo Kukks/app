@@ -154,6 +154,14 @@ public class BTCPayConnectionManager(
                     {
                         await accountManager.SetCurrentStoreId(config.CurrentStoreId);
                     }
+                    else
+                    {
+                        // The persisted selection was cleared — reset any stale in-memory store
+                        // scope to match. AuthStateProvider.SetCurrentStore writes CurrentStoreId
+                        // synchronously, so an empty config always means "no store selected", and
+                        // SetCurrentStoreId(null) is a no-op when the scope is already unset.
+                        await accountManager.SetCurrentStoreId(null);
+                    }
                     break;
                 case BTCPayConnectionState.Disconnected:
                     newState = BTCPayConnectionState.WaitingForAuth;
