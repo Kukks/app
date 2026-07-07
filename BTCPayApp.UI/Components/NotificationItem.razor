@@ -2,14 +2,14 @@
 <a href="@Notification.Link" class="border-bottom border-light @(Notification.Seen ? null : "bg-light")" @onclick="HandleClick" @onclick:preventDefault>
     <div class="container d-flex align-items-center gap-3 py-3">
         <div>
-            <Icon Symbol="@NotificationIcon(Notification.Identifier)"/>
+            <Icon Symbol="@NotificationIcon(Notification.Identifier)" />
         </div>
         <div class="content">
             <div class="fw-semibold text-wrap">
                 @Notification.Body
             </div>
             <small class="text-muted">
-                <DateDisplay DateTimeOffset="Notification.CreatedTime"/>
+                <DateDisplay DateTimeOffset="Notification.CreatedTime" />
             </small>
         </div>
     </div>

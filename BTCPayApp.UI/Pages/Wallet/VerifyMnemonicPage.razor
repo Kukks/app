@@ -1,0 +1,89 @@
+@attribute [Route(Routes.WalletBackupVerify)]
+@using BTCPayApp.Core.Services
+@inject MnemonicBackupService BackupService
+@inject NavigationManager Nav
+
+<PageTitle>Verify backup</PageTitle>
+
+<section class="container py-4">
+    <h1 class="mb-3">Verify your backup</h1>
+    <p class="text-secondary">Type the words at the positions below to confirm you wrote them down correctly.</p>
+
+    @if (_positions is null)
+    {
+        <Alert Type="warning">Mnemonic unavailable. Wallet bootstrap may not have completed yet.</Alert>
+    }
+    else
+    {
+        @if (_error is not null)
+        {
+            <Alert Type="danger" class="mb-3">@_error</Alert>
+        }
+
+        @for (var i = 0; i < _positions.Count; i++)
+        {
+            var idx = i;
+            <div class="mb-3">
+                <label class="form-label">Word #@_positions[idx]</label>
+                <input class="form-control" autocomplete="off" autocapitalize="none"
+                       @bind="_inputs[idx]" @bind:event="oninput" />
+            </div>
+        }
+
+        <button class="btn btn-primary w-100" type="button" @onclick="Submit" disabled="@_submitting">
+            @(_submitting ? "Verifying..." : "Verify")
+        </button>
+        <button class="btn btn-link w-100 mt-2" type="button" @onclick="Reshuffle">Pick different words</button>
+    }
+</section>
+
+@code {
+    private IReadOnlyList<int>? _positions;
+    private string[] _inputs = Array.Empty<string>();
+    private string[]? _words;
+    private string? _error;
+    private bool _submitting;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var mnemonic = await BackupService.GetMnemonicAsync();
+        if (string.IsNullOrWhiteSpace(mnemonic)) return;
+        _words = mnemonic.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        _positions = BackupService.ChooseVerificationPositions(mnemonic);
+        _inputs = new string[_positions.Count];
+    }
+
+    private void Reshuffle()
+    {
+        if (_words is null) return;
+        var mnemonic = string.Join(' ', _words);
+        _positions = BackupService.ChooseVerificationPositions(mnemonic);
+        _inputs = new string[_positions.Count];
+        _error = null;
+    }
+
+    private async Task Submit()
+    {
+        if (_positions is null || _words is null) return;
+        _submitting = true;
+        _error = null;
+        try
+        {
+            for (var i = 0; i < _positions.Count; i++)
+            {
+                var expected = _words[_positions[i] - 1];
+                if (!string.Equals(_inputs[i]?.Trim(), expected, StringComparison.OrdinalIgnoreCase))
+                {
+                    _error = "One or more words don't match. Check your backup and try again.";
+                    return;
+                }
+            }
+            await BackupService.MarkBackupVerifiedAsync();
+            Nav.NavigateTo(Routes.Dashboard + "?Success=Backup%20verified");
+        }
+        finally
+        {
+            _submitting = false;
+        }
+    }
+}

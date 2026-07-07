@@ -28,7 +28,7 @@
                 if (Loading)
                 {
                     <div class="p-3 text-center">
-                        <LoadingIndicator/>
+                        <LoadingIndicator />
                     </div>
                 }
                 else if (!string.IsNullOrEmpty(Error))
@@ -50,7 +50,7 @@
                     </div>
                 </div>
                 <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" SuccessMessage="@_successMessage" ErrorMessage="@Error">
-                    <DataAnnotationsValidator/>
+                    <DataAnnotationsValidator />
                     <fieldset class="box">
                         <div class="form-group">
                             <label for="Role" class="form-label">Role</label>
@@ -60,16 +60,16 @@
                                     <option value="@r.Id" selected="@(Model.Role == r.Id)">@r.Role</option>
                                 }
                             </InputSelect>
-                            <ValidationMessage For="@(() => Model.Role)"/>
+                            <ValidationMessage For="@(() => Model.Role)" />
                         </div>
                     </fieldset>
                     @if (!string.IsNullOrEmpty(User.InvitationUrl))
                     {
                         <div class="box">
-                            <QrCode Data="@User.InvitationUrl" class="qr-code rounded mb-3"/>
+                            <QrCode Data="@User.InvitationUrl" class="qr-code rounded mb-3" />
                             <div class="form-floating form-group">
                                 <TruncateCenter Text="@User.InvitationUrl" Padding="10" Copy="true" Elastic="true"
-                                                class="form-control-plaintext"/>
+                                                class="form-control-plaintext" />
                                 <label>Invitation URL</label>
                             </div>
                         </div>
@@ -77,7 +77,7 @@
                     <button class="btn btn-outline-danger w-100" type="button" data-bs-toggle="modal" data-bs-target="#RemoveUserModal">
                         @if (_removing)
                         {
-                            <LoadingIndicator/>
+                            <LoadingIndicator />
                         }
                         else
                         {
@@ -87,12 +87,12 @@
                     <ConfirmModal id="RemoveUserModal"
                                   Title="Remove User"
                                   Description="@($"Do you really want to remove the user {User.Name ?? User.Email} from the store?")"
-                                  OnConfirm="RemoveUser"/>
+                                  OnConfirm="RemoveUser" />
                     <div id="CtaContainer" class="container d-flex align-items-center justify-content-between">
                         <button type="submit" class="btn btn-primary w-100" disabled="@(_validationEditContext!.Invalid || _sending)">
                             @if (_sending)
                             {
-                                <LoadingIndicator/>
+                                <LoadingIndicator />
                             }
                             else
                             {

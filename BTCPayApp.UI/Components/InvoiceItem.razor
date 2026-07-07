@@ -7,10 +7,10 @@
         @DisplayFormatter.Currency(Invoice.Amount, Invoice.Currency, DisplayFormatter.CurrencyFormat.Symbol)
     </span>
     <span>
-        <TruncateCenter Text="@Invoice.Id" class="truncate-center-id"/>
+        <TruncateCenter Text="@Invoice.Id" class="truncate-center-id" />
     </span>
     <span class="text-muted">
-        <DateDisplay DateTimeOffset="@Invoice.CreatedTime"/>
+        <DateDisplay DateTimeOffset="@Invoice.CreatedTime" />
     </span>
     <span class="text-end">
         <InvoiceStatusDisplay Invoice="@Invoice" />

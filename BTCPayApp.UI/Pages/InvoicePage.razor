@@ -57,7 +57,7 @@
                             <span data-sensitive>@DisplayFormatter.Currency(Invoice.Amount, Invoice.Currency, DisplayFormatter.CurrencyFormat.Symbol)</span>
                         </div>
                         <div class="status d-flex flex-wrap align-items-center gap-2">
-                            <InvoiceStatusDisplay Invoice="@Invoice"/>
+                            <InvoiceStatusDisplay Invoice="@Invoice" />
                         </div>
 
                         <div class="invoice-actions mt-3 mb-3">
@@ -109,13 +109,13 @@
                                     <tr>
                                         <th>Created</th>
                                         <td>
-                                            <DateDisplay DateTimeOffset="@Invoice.CreatedTime"/>
+                                            <DateDisplay DateTimeOffset="@Invoice.CreatedTime" />
                                         </td>
                                     </tr>
                                     <tr>
                                         <th>Expired</th>
                                         <td>
-                                            <DateDisplay DateTimeOffset="@Invoice.ExpirationTime"/>
+                                            <DateDisplay DateTimeOffset="@Invoice.ExpirationTime" />
                                         </td>
                                     </tr>
                                 </tbody>
@@ -274,7 +274,7 @@
                                     }
                                 </header>
                                 <div class="box">
-                                    <DataDisplay Data="@parsedReceiptData"/>
+                                    <DataDisplay Data="@parsedReceiptData" />
                                 </div>
                             }
                         }
@@ -294,7 +294,7 @@
                                     <span class="text-end">
                                         @p.PaymentMethod.PaymentMethodId
                                     </span>
-                                    <TruncateCenter Text="@p.Payment.Destination" Copy="true" class="truncate-center-id"/>
+                                    <TruncateCenter Text="@p.Payment.Destination" Copy="true" class="truncate-center-id" />
                                     <span class="text-end text-muted" data-sensitive>
                                         Rate: @DisplayFormatter.Currency(p.PaymentMethod.Rate, Invoice.Currency, DisplayFormatter.CurrencyFormat.Symbol)
                                     </span>
@@ -311,7 +311,7 @@
                             @if (PaymentMethodsLoading)
                             {
                                 <div class="p-3 text-center">
-                                    <LoadingIndicator/>
+                                    <LoadingIndicator />
                                 </div>
                             }
                             else
@@ -324,7 +324,7 @@
                 else if (Loading)
                 {
                     <div class="p-3 text-center">
-                        <LoadingIndicator/>
+                        <LoadingIndicator />
                     </div>
                 }
             </Authorized>
@@ -336,7 +336,7 @@
     else
     {
         <div class="p-3 text-center">
-            <LoadingIndicator/>
+            <LoadingIndicator />
         </div>
     }
 </section>
@@ -379,7 +379,7 @@
 
     private async Task ToggleArchive()
     {
-        await AccountManager.GetClient().ArchiveInvoice(StoreId, InvoiceId);
+        await AccountManager.GetClient().ArchiveInvoice(InvoiceId);
         _successMessage = "The invoice has been archived and will no longer appear in the invoice list by default";
         if (!string.IsNullOrEmpty(StoreId) && !string.IsNullOrEmpty(InvoiceId))
         {

@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
   <PropertyGroup>
-    <TargetFrameworks>net8.0-android;</TargetFrameworks>
-    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('linux'))">net8.0-android;</TargetFrameworks>
+    <TargetFrameworks>net10.0-android;</TargetFrameworks>
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('linux'))">net10.0-android;</TargetFrameworks>
     <OutputType>Exe</OutputType>
     <RootNamespace>BTCPayApp.Maui</RootNamespace>
     <UseMaui>true</UseMaui>
@@ -35,7 +35,21 @@
 
   <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
     <AndroidUseAapt2>True</AndroidUseAapt2>
-    <AndroidEnableMultiDex>False</AndroidEnableMultiDex>
+    <!-- Multi-dex on: the NArk + BTCPayServer.Client + Fluxor + EF dependency
+         graph blows past Android's 65,536 method limit per dex, so D8 was
+         exiting code 2 during packaging. -->
+    <AndroidEnableMultiDex>True</AndroidEnableMultiDex>
+    <!-- Disable the linker on Android. R8 was OOMing on the BTCPayServer/NArk
+         class graph during dex packaging (java.exe exit 2). Skipping the linker
+         keeps every method in the APK, which is fine for a development build
+         and removes the heaviest JVM step from the pipeline. Once we have a
+         signing story for releases, re-enable with explicit linker rules. -->
+    <AndroidLinkMode>None</AndroidLinkMode>
+    <!-- Interpreter mode: avoids AOT-related class-file generation that older D8
+         versions sometimes choke on. Pairs with RunAOTCompilation=false above. -->
+    <UseInterpreter>True</UseInterpreter>
+    <!-- Generous heap for the dex+R8 step on CI runners. -->
+    <AndroidJavaMaximumHeapSize>4G</AndroidJavaMaximumHeapSize>
     <AndroidCreatePackagePerAbi>False</AndroidCreatePackagePerAbi>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
     <EmbedAssembliesIntoApk>True</EmbedAssembliesIntoApk>
@@ -43,6 +57,17 @@
 
   <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android' And '$(Configuration)' == 'Release'">
     <PublishTrimmed>False</PublishTrimmed>
+  </PropertyGroup>
+
+  <!-- Release signing only when the password is actually available
+       (developer machine with the env var set, or CI with the secret
+       configured). Without it, fall through to MAUI's default debug
+       keystore so the build still produces an installable-on-dev APK
+       and the pipeline keeps verifying. This avoids the previous
+       failure mode where CI without the secret produced a misleading
+       "java.exe exited with code 2" / "UnrecoverableKeyException"
+       deep in the signing step. -->
+  <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android' And '$(Configuration)' == 'Release' And '$(ANDROID_SIGNING_PASSWORD)' != ''">
     <AndroidKeyStore>True</AndroidKeyStore>
     <AndroidSigningKeyStore>../btcpayapp.keystore</AndroidSigningKeyStore>
     <AndroidSigningKeyAlias>btcpayapp</AndroidSigningKeyAlias>
@@ -66,10 +91,10 @@
     <ProjectReference Include="..\BTCPayApp.Core\BTCPayApp.Core.csproj" />
     <ProjectReference Include="..\BTCPayApp.UI\BTCPayApp.UI.csproj" />
     <PackageReference Include="Plugin.Fingerprint" Version="3.0.0-beta.1" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="8.0.100" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.3" />
-    <PackageReference Include="Microsoft.Maui.Controls" Version="8.0.100" />
-    <PackageReference Include="Microsoft.Maui.Essentials" Version="8.0.100" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="10.0.70" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.6" />
+    <PackageReference Include="Microsoft.Maui.Controls" Version="10.0.70" />
+    <PackageReference Include="Microsoft.Maui.Essentials" Version="10.0.70" />
     <PackageReference Include="Plugin.NFC" Version="0.1.26" />
   </ItemGroup>
 

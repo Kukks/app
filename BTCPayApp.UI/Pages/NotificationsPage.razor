@@ -14,7 +14,7 @@
         <SectionContent SectionId="Titlebar.End">
             @if (Loading)
             {
-                <LoadingIndicator/>
+                <LoadingIndicator />
             }
             else if (Notifications?.Any(n => n.Seen == false) is true)
             {
@@ -38,7 +38,7 @@
         <div class="notifications">
             @foreach (var n in Notifications)
             {
-                <NotificationItem Notification="@n" OnClick="OnClick"/>
+                <NotificationItem Notification="@n" OnClick="OnClick" />
             }
         </div>
     }

@@ -1,4 +1,10 @@
 [submodule "submodules/btcpayserver"]
 	path = submodules/btcpayserver
-	url = https://github.com/btcpayserver/btcpayserver
-	branch = mobile-working-branch
+	url = https://github.com/Kukks/btcpayserver
+	branch = mobile-working-master-merge
+[submodule "submodules/NArk"]
+	path = submodules/NArk
+	url = https://github.com/arkade-os/dotnet-sdk.git
+[submodule "submodules/btcpay-arkade"]
+	path = submodules/btcpay-arkade
+	url = https://github.com/ArkLabsHQ/btcpay-arkade

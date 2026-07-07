@@ -927,7 +927,7 @@ public record StoreState
         {
             try
             {
-                var invoice = await accountManager.GetClient().GetInvoice(action.StoreId, action.InvoiceId);
+                var invoice = await accountManager.GetClient().GetInvoice(action.InvoiceId);
                 dispatcher.Dispatch(new SetInvoice(invoice, null, action.InvoiceId));
             }
             catch (Exception e)
@@ -942,7 +942,7 @@ public record StoreState
         {
             try
             {
-                var pms = await accountManager.GetClient().GetInvoicePaymentMethods(action.StoreId, action.InvoiceId);
+                var pms = await accountManager.GetClient().GetInvoicePaymentMethods(action.InvoiceId);
                 dispatcher.Dispatch(new SetInvoicePaymentMethods(pms, null, action.InvoiceId));
             }
             catch (Exception e)

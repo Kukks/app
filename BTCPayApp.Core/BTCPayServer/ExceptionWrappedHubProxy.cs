@@ -40,11 +40,6 @@ public class ExceptionWrappedHubProxy : IBTCPayAppHubServer
         }).Unwrap();
     }
 
-    public async Task<bool> DeviceMasterSignal(long deviceIdentifier, bool active)
-    {
-        return await Wrap(async () => await _hubProxy.DeviceMasterSignal(deviceIdentifier, active));
-    }
-
     public async Task<Dictionary<string, string>> Pair(PairRequest request)
     {
         return await Wrap(async () => await _hubProxy.Pair(request));
@@ -100,13 +95,8 @@ public class ExceptionWrappedHubProxy : IBTCPayAppHubServer
         return await Wrap(async () => await _hubProxy.GetTransactions(identifiers));
     }
 
-    public async Task SendInvoiceUpdate(LightningInvoice lightningInvoice)
+    public async Task<ArkadeServerConfigDto> GetArkadeConfig()
     {
-        await Wrap(() => Task.FromResult(_hubProxy.SendInvoiceUpdate(lightningInvoice)));
-    }
-
-    public async Task<long?> GetCurrentMaster()
-    {
-        return await Wrap(async () => await _hubProxy.GetCurrentMaster());
+        return await Wrap(async () => await _hubProxy.GetArkadeConfig());
     }
 }

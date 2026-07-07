@@ -1,0 +1,58 @@
+@attribute [Route(Routes.WalletBackup)]
+@using BTCPayApp.Core.Services
+@inject MnemonicBackupService BackupService
+@inject NavigationManager Nav
+
+<PageTitle>Back up wallet</PageTitle>
+
+<section class="container py-4">
+    <h1 class="mb-3">Back up your wallet</h1>
+    <p class="text-secondary">
+        Write down these words in order and keep them somewhere safe and private.
+        They are the only way to recover this device's funds if it is lost or wiped.
+        Anyone with these words can spend your funds.
+    </p>
+
+    @if (_words is null)
+    {
+        <Alert Type="warning">Mnemonic unavailable. Wallet bootstrap may not have completed yet.</Alert>
+    }
+    else
+    {
+        <ol class="mnemonic-grid mb-4">
+            @for (var i = 0; i < _words.Length; i++)
+            {
+                <li class="mnemonic-word">
+                    <span class="position">@(i + 1)</span>
+                    <span class="word">@_words[i]</span>
+                </li>
+            }
+        </ol>
+
+        <div class="d-flex gap-2 flex-column flex-md-row">
+            <button class="btn btn-primary flex-fill" type="button" @onclick="GoVerify">I've written it down — verify</button>
+            <button class="btn btn-outline-secondary flex-fill" type="button" @onclick="Cancel">Cancel</button>
+        </div>
+    }
+</section>
+
+<style>
+    .mnemonic-grid { list-style:none; padding:0; display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:0.5rem; }
+    .mnemonic-word { background:var(--btcpay-bg-tile); border-radius:0.5rem; padding:0.5rem 0.75rem; display:flex; align-items:baseline; gap:0.4rem; }
+    .mnemonic-word .position { font-size:0.75rem; color:var(--btcpay-body-text-muted); width:1.5rem; }
+    .mnemonic-word .word { font-weight:600; }
+</style>
+
+@code {
+    private string[]? _words;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var mnemonic = await BackupService.GetMnemonicAsync();
+        if (!string.IsNullOrWhiteSpace(mnemonic))
+            _words = mnemonic.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+    }
+
+    private void GoVerify() => Nav.NavigateTo(Routes.WalletBackupVerify);
+    private void Cancel() => Nav.NavigateTo(Routes.Dashboard);
+}

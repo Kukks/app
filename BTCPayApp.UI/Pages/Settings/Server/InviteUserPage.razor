@@ -20,12 +20,12 @@
     <AuthorizeView Policy="@Policies.CanModifyServerSettings">
         <Authorized>
             <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" SuccessMessage="@_successMessage" ErrorMessage="@_errorMessage" class="box">
-                <DataAnnotationsValidator/>
+                <DataAnnotationsValidator />
                 <div id="CtaContainer" class="container d-flex align-items-center justify-content-between">
                     <button type="submit" class="btn btn-primary w-100" disabled="@(_validationEditContext!.Invalid || _sending)">
                         @if (_sending)
                         {
-                            <LoadingIndicator/>
+                            <LoadingIndicator />
                         }
                         else
                         {
@@ -35,13 +35,13 @@
                 </div>
                 <div class="form-group">
                     <label for="Email" class="form-label" data-required>Email</label>
-                    <InputText @bind-Value="Model.Email" id="Email" type="email" class="form-control"/>
-                    <ValidationMessage For="@(() => Model.Email)"/>
+                    <InputText @bind-Value="Model.Email" id="Email" type="email" class="form-control" />
+                    <ValidationMessage For="@(() => Model.Email)" />
                 </div>
                 <div class="form-group">
                     <label for="Name" class="form-label">Name</label>
-                    <InputText @bind-Value="Model.Name" id="Name" class="form-control"/>
-                    <ValidationMessage For="@(() => Model.Name)"/>
+                    <InputText @bind-Value="Model.Name" id="Name" class="form-control" />
+                    <ValidationMessage For="@(() => Model.Name)" />
                 </div>
             </ValidationEditContext>
         </Authorized>

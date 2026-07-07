@@ -4,7 +4,7 @@
     @if (Loading)
     {
         <div class="p-3 text-center">
-            <LoadingIndicator/>
+            <LoadingIndicator />
         </div>
     }
     @if (Channels is not null)
@@ -14,7 +14,7 @@
             @foreach (var c in Channels)
             {
                 <div class="box accordion">
-                    <ChannelsListItem Channel="@c" OnCloseChannel="OnCloseChannel" Loading="@(UpdatingChannelId == c.Id)"/>
+                    <ChannelsListItem Channel="@c" OnCloseChannel="OnCloseChannel" Loading="@(UpdatingChannelId == c.Id)" />
                 </div>
             }
         }

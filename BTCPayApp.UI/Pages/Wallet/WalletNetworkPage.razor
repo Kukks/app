@@ -1,0 +1,66 @@
+@attribute [Route(Routes.WalletNetwork)]
+@using BTCPayApp.Core.BTCPayServer
+@using BTCPayApp.Core.Services
+@inject ArkadeOperatorConfig OperatorConfig
+
+<PageTitle>Arkade network (inherited)</PageTitle>
+
+<section class="container py-4">
+    <h1 class="mb-3">Arkade network (inherited)</h1>
+    <p class="text-secondary">These come from your paired BTCPay store. To change, configure the Arkade plugin on the server.</p>
+
+    @if (_config is null)
+    {
+        <Alert Type="info" class="mb-3">Waiting for first sync from your BTCPay store. Make sure you're paired and connected.</Alert>
+    }
+    else
+    {
+        <dl class="row mb-0">
+            <dt class="col-sm-4">Network</dt>
+            <dd class="col-sm-8">@_config.NetworkType</dd>
+
+            <dt class="col-sm-4">Operator</dt>
+            <dd class="col-sm-8"><code>@_config.ArkUri</code></dd>
+
+            @if (!string.IsNullOrWhiteSpace(_config.ExplorerUri))
+            {
+                <dt class="col-sm-4">Explorer</dt>
+                <dd class="col-sm-8"><code>@_config.ExplorerUri</code></dd>
+            }
+            @if (!string.IsNullOrWhiteSpace(_config.EsploraUri))
+            {
+                <dt class="col-sm-4">Esplora</dt>
+                <dd class="col-sm-8"><code>@_config.EsploraUri</code></dd>
+            }
+            @if (!string.IsNullOrWhiteSpace(_config.BoltzUri))
+            {
+                <dt class="col-sm-4">Boltz</dt>
+                <dd class="col-sm-8"><code>@_config.BoltzUri</code></dd>
+            }
+            @if (!string.IsNullOrWhiteSpace(_config.ArkadeWalletUri))
+            {
+                <dt class="col-sm-4">Arkade wallet</dt>
+                <dd class="col-sm-8"><code>@_config.ArkadeWalletUri</code></dd>
+            }
+            @if (!string.IsNullOrWhiteSpace(_config.ElectrumWsUri))
+            {
+                <dt class="col-sm-4">Electrum (WS)</dt>
+                <dd class="col-sm-8"><code>@_config.ElectrumWsUri</code></dd>
+            }
+            @if (!string.IsNullOrWhiteSpace(_config.ElectrumTcpUri))
+            {
+                <dt class="col-sm-4">Electrum (TCP)</dt>
+                <dd class="col-sm-8"><code>@_config.ElectrumTcpUri</code></dd>
+            }
+        </dl>
+    }
+</section>
+
+@code {
+    private ArkadeServerConfigDto? _config;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _config = await OperatorConfig.GetServerConfigAsync();
+    }
+}

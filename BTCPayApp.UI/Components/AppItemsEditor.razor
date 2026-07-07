@@ -20,7 +20,7 @@
                         var imageUrl = hasImage ? context.Image : "_content/BTCPayApp.UI/img/img-placeholder.svg";
                     }
                     <button type="button" class="btn b-0 control drag" disabled="@(_items.Count == 1)">
-                        <Icon Symbol="actions-drag"/>
+                        <Icon Symbol="actions-drag" />
                     </button>
                     <div class="template-item d-flex align-items-start w-100 gap-3" @onclick="async () => { await SelectItem(SelectedItem != null && context.Id == SelectedItem.Id ? null : context); }">
                         <div class="img">
@@ -50,12 +50,12 @@
                         </div>
                     </div>
                     <button type="button" class="btn b-0 control remove" @onclick="() => RemoveItem(context)">
-                        <Icon Symbol="actions-remove"/>
+                        <Icon Symbol="actions-remove" />
                     </button>
                 </Dropzone>
             }
             <button type="button" id="btAddItem" class="btn btn-link py-0 px-2 mt-2 mb-2 gap-1 add fw-semibold d-inline-flex align-items-center" @onclick="AddItem">
-                <Icon Symbol="actions-add"/>
+                <Icon Symbol="actions-add" />
                 Add Item
             </button>
         </div>
@@ -72,12 +72,12 @@
                             <DataAnnotationsValidator />
                             <div class="form-group">
                                 <label for="Title" class="form-label" data-required>Title</label>
-                                <InputText @bind-Value="SelectedItem.Title" @bind-Value:after="GenerateId" id="Title" class="form-control"/>
+                                <InputText @bind-Value="SelectedItem.Title" @bind-Value:after="GenerateId" id="Title" class="form-control" />
                                 <ValidationMessage For="@(() => SelectedItem.Title)" />
                             </div>
                             <div class="form-group">
                                 <label for="Id" class="form-label" data-required>ID</label>
-                                <InputText @bind-Value="SelectedItem.Id" id="Id" class="form-control"/>
+                                <InputText @bind-Value="SelectedItem.Id" id="Id" class="form-control" />
                                 <ValidationMessage For="@(() => SelectedItem.Id)" />
                                 <div class="form-text">Leave blank to generate ID from title.</div>
                             </div>
@@ -96,7 +96,7 @@
                                         <label for="Price" class="form-label">&nbsp;</label>
                                         <div class="input-group mb-2">
                                             <InputNumber @bind-Value="SelectedItem.Price" id="Price" class="form-control hide-number-spin" inputmode="decimal" min="0"
-                                                         pattern="\d*" step="any" aria-describedby="currency-addon"/>
+                                                         pattern="\d*" step="any" aria-describedby="currency-addon" />
                                             <span class="input-group-text" id="currency-addon">@Currency</span>
                                         </div>
                                     </div>
@@ -110,43 +110,43 @@
                                         @if (!string.IsNullOrEmpty(SelectedItem.ImageUrl))
                                         {
                                         <button type="button" class="btn btn-link p-0 text-danger" @onclick="UnsetImage">
-                                            <Icon Symbol="cross"/> Remove
+                                            <Icon Symbol="cross" /> Remove
                                         </button>
                                         }
                                     </div>
-                                    <InputText @bind-Value="SelectedItem.ImageUrl" id="ImageUrl" class="form-control mb-2" type="url"/>
-                                    <ValidationMessage For="@(() => SelectedItem.ImageUrl)"/>
+                                    <InputText @bind-Value="SelectedItem.ImageUrl" id="ImageUrl" class="form-control mb-2" type="url" />
+                                    <ValidationMessage For="@(() => SelectedItem.ImageUrl)" />
                                     <div class="d-flex align-items-center gap-2">
-                                        <InputFile OnChange="LoadImage" @key="@_inputFileId" id="Image" class="form-control"/>
+                                        <InputFile OnChange="LoadImage" @key="@_inputFileId" id="Image" class="form-control" />
                                         <button class="btn btn-primary" type="button" @onclick="UploadImage" disabled="@(string.IsNullOrEmpty(SelectedItem.ImagePath))">Upload</button>
                                     </div>
                                 </div>
                                 @if (!string.IsNullOrEmpty(SelectedItem.ImageUrl))
                                 {
-                                    <img src="@SelectedItem.ImageUrl" alt="@SelectedItem.Title" class="item-image"/>
+                                    <img src="@SelectedItem.ImageUrl" alt="@SelectedItem.Title" class="item-image" />
                                 }
                             </div>
                             <div class="form-group">
                                 <label for="Description" class="form-label">Description</label>
-                                <InputTextArea @bind-Value="SelectedItem.Description" id="Description" class="form-control" rows="3" cols="40"/>
+                                <InputTextArea @bind-Value="SelectedItem.Description" id="Description" class="form-control" rows="3" cols="40" />
                                 <ValidationMessage For="@(() => SelectedItem.Description)" />
                             </div>
 
                             <div class="form-group">
                                 <label for="Inventory" class="form-label">Inventory</label>
-                                <InputNumber @bind-Value="SelectedItem.Inventory" id="Inventory" class="form-control" inputmode="numeric" min="0" step="1"/>
+                                <InputNumber @bind-Value="SelectedItem.Inventory" id="Inventory" class="form-control" inputmode="numeric" min="0" step="1" />
                                 <ValidationMessage For="@(() => SelectedItem.Inventory)" />
                                 <div class="form-text">Leave empty to not use this feature.</div>
                             </div>
                             <div class="form-group">
                                 <label for="BuyButtonText" class="form-label">Buy Button Text</label>
-                                <InputText @bind-Value="SelectedItem.BuyButtonText" id="BuyButtonText" class="form-control"/>
+                                <InputText @bind-Value="SelectedItem.BuyButtonText" id="BuyButtonText" class="form-control" />
                                 <ValidationMessage For="@(() => SelectedItem.BuyButtonText)" />
                             </div>
                             <div class="form-group d-flex align-items-center">
-                                <InputCheckbox @bind-Value="@SelectedItem.Enabled" id="Enable" class="btcpay-toggle me-3"/>
+                                <InputCheckbox @bind-Value="@SelectedItem.Enabled" id="Enable" class="btcpay-toggle me-3" />
                                 <label for="Enable" class="form-check-label">Enable</label>
-                                <ValidationMessage For="@(() => SelectedItem.Enabled)"/>
+                                <ValidationMessage For="@(() => SelectedItem.Enabled)" />
                             </div>
                         </ValidationEditContext>
                     }

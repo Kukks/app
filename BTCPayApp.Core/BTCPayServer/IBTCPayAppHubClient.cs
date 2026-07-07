@@ -1,6 +1,9 @@
 using BTCPayServer.Client.Models;
 using BTCPayServer.Lightning;
 using NBitcoin;
+using NBitcoin.Scripting;
+using NBitcoin.Secp256k1;
+using NBitcoin.Secp256k1.Musig;
 
 namespace BTCPayApp.Core.BTCPayServer;
 
@@ -12,24 +15,39 @@ public interface IBTCPayAppHubClient
     Task NotifyServerNode(string nodeInfo);
     Task TransactionDetected(TransactionDetectedRequest request);
     Task NewBlock(string block);
-    Task StartListen(string key);
-
-    Task<LightningInvoice> CreateInvoice(string key, CreateLightningInvoiceRequest createLightningInvoiceRequest);
-    Task<LightningInvoice?> GetLightningInvoice(string key, uint256 paymentHash);
-    Task<LightningPayment?> GetLightningPayment(string key, uint256 paymentHash);
-    Task CancelInvoice(string key, uint256 paymentHash);
-    Task<List<LightningPayment>> GetLightningPayments(string key, ListPaymentsParams request);
-    Task<List<LightningInvoice>> GetLightningInvoices(string key, ListInvoicesParams request);
-    Task<PayResponse> PayInvoice(string key, string bolt11, long? amountMilliSatoshi);
+    // Notifies the device which BTCPayApp instance is currently master for its
+    // user (or null if no instance is). Called from BTCPayAppState when the
+    // master flag is updated for any connection in the user's group.
     Task MasterUpdated(long? deviceIdentifier);
-    Task<LightningNodeInformation> GetLightningNodeInfo(string key);
-    Task<LightningNodeBalance> GetLightningBalance(string key);
+
+    // Remote-signer callbacks. Mirror NArk.Abstractions.Wallets.IRemoteSignerTransport
+    // (NArk master, post-#107/#113/#114) with a walletId first arg so the
+    // server-side BTCPayAppDeviceProxy can address the right owner-wallet on
+    // the connected device. The device-side BTCPayAppServerClient forwards each
+    // call to ArkSignerService, which resolves the local IArkadeWalletSigner
+    // and validates the walletId matches the device's owner wallet before
+    // signing. The MuSig2 secret nonce never crosses this wire: GenerateNonces
+    // returns only the public half, and SignMusig refers to the secret half
+    // by the same sessionId the local signer indexed it under.
+    //
+    // Wire encoding: primitives only. SignalR's JSON protocol cannot move the
+    // NBitcoin/secp types these operations speak (and a plugin must not
+    // reconfigure BTCPay's global SignalR protocol), so descriptors travel as
+    // descriptor strings, hashes as uint256 hex, keys/nonces/signatures as hex
+    // bytes (33B compressed pubkey, 32B x-only key, 64B Schnorr signature,
+    // 66B MuSig public nonce, 32B MuSig partial signature), and the MuSig2
+    // session as a MusigContextWire blob. BTCPayAppDeviceProxy encodes,
+    // BTCPayAppServerClient decodes back into the typed ArkSignerService calls.
+    Task<bool> KnowsWallet(string walletId);
+    Task<string> GetPubKey(string walletId, string descriptor);
+    Task<string> SignMusig(string walletId, string descriptor, string musigContext, string sessionId);
+    Task<SignResponse> Sign(string walletId, string descriptor, string hash);
+    Task<string> GenerateNonces(string walletId, string descriptor, string musigContext, string sessionId);
 }
 
 //methods available on the hub in the server
 public interface IBTCPayAppHubServer
 {
-    Task<bool> DeviceMasterSignal(long deviceIdentifier, bool active);
     Task<Dictionary<string,string>> Pair(PairRequest request);
     Task<AppHandshakeResponse> Handshake(AppHandshake request);
     Task<bool> BroadcastTransaction(string tx);
@@ -41,8 +59,20 @@ public interface IBTCPayAppHubServer
     Task<string> UpdatePsbt(string[] identifiers, string psbt);
     Task<Dictionary<string, CoinResponse[]>> GetUTXOs(string[] identifiers);
     Task<Dictionary<string, TxResp[]>> GetTransactions(string[] identifiers);
-    Task SendInvoiceUpdate(LightningInvoice lightningInvoice);
-    Task<long?> GetCurrentMaster();
+
+    // Returns the paired BTCPay store's Arkade-plugin network configuration so
+    // the device can inherit it. The device must NOT pick its own network — if
+    // device and plugin diverge, signing fails silently. See
+    // ArkadeConfigSyncService for the device-side persist + sync.
+    Task<ArkadeServerConfigDto> GetArkadeConfig();
+}
+
+// BIP-340 signature over the wire: 32-byte x-only pubkey + 64-byte Schnorr
+// signature, both hex.
+public class SignResponse
+{
+    public string XOnlyPubKey { get; set; } = null!;
+    public string Signature { get; set; } = null!;
 }
 
 public class ServerEvent

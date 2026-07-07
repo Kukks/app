@@ -5,7 +5,6 @@
 @using BTCPayApp.Core.Contracts
 @using BTCPayApp.Core.Helpers
 @using BTCPayApp.Core.Models
-@using BTCPayApp.Core.Wallet
 @using BTCPayApp.UI.Features
 @using BTCPayApp.UI.Util
 @using BTCPayServer.Client
@@ -14,10 +13,10 @@
 @inject IDispatcher Dispatcher
 @inject ConfigProvider ConfigProvider
 @inject IAccountManager AccountManager
-@inject OnChainWalletManager OnChainWalletManager
 @inject IState<UserState> UserState
-@inject BTCPayConnectionManager ConnectionManager
 @inject IJSRuntime JS
+@inject BTCPayApp.Core.Services.MnemonicBackupService BackupService
+@inject BTCPayApp.Core.Services.ArkadeOperatorConfig OperatorConfig
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 <PageTitle>Settings</PageTitle>
@@ -34,7 +33,7 @@
                         @foreach (var theme in ThemeList)
                         {
                             <button type="button" class="btn-icon @(Model.Theme == theme ? "active" : null)" title="@theme" @onclick="() => SetTheme(theme)">
-                                <Icon Symbol="@($"themes-{theme.ToLower()}")"/>
+                                <Icon Symbol="@($"themes-{theme.ToLower()}")" />
                             </button>
                         }
                     </div>
@@ -50,8 +49,8 @@
                         {
                             <div class="d-inline-flex align-items-center p-0 gap-3">
                                 <button class="d-inline-flex align-items-center btn btn-link text-body dropdown-toggle dropdown-toggle-no-caret p-0 gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <UserInfo Email="@CurrentUser.Email" Name="@CurrentUser.Name" ImageUrl="@CurrentUser.ImageUrl"/>
-                                    <Icon Symbol="caret-down" class="text-muted"/>
+                                    <UserInfo Email="@CurrentUser.Email" Name="@CurrentUser.Name" ImageUrl="@CurrentUser.ImageUrl" />
+                                    <Icon Symbol="caret-down" class="text-muted" />
                                 </button>
                                 <ul class="dropdown-menu">
                                     <li><h6 class="dropdown-header">Switch to mode</h6></li>
@@ -66,11 +65,11 @@
                         }
                         else
                         {
-                            <UserInfo Email="@CurrentUser.Email" Name="@CurrentUser.Name" ImageUrl="@CurrentUser.ImageUrl"/>
+                            <UserInfo Email="@CurrentUser.Email" Name="@CurrentUser.Name" ImageUrl="@CurrentUser.ImageUrl" />
                         }
                     </Authorized>
                     <NotAuthorized>
-                        <UserInfo Email="@CurrentUser.Email" Name="@CurrentUser.Name" ImageUrl="@CurrentUser.ImageUrl"/>
+                        <UserInfo Email="@CurrentUser.Email" Name="@CurrentUser.Name" ImageUrl="@CurrentUser.ImageUrl" />
                         <span class="btn btn-link fw-semibold px-2 py-1 ms-auto" @onclick="SwitchBackToOwner">Switch back</span>
                     </NotAuthorized>
                 </AuthorizeView>
@@ -81,7 +80,7 @@
                                 <div class="modal-header pb-0">
                                     <h1 class="modal-title fs-5">Switch back to admin mode</h1>
                                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
-                                        <Icon Symbol="close"/>
+                                        <Icon Symbol="close" />
                                     </button>
                                 </div>
                                 <div class="modal-body">
@@ -91,15 +90,15 @@
                                     }
                                     <div hidden="@SignInModel.RequireTwoFactor">
                                         <label for="Password" class="form-label">Password</label>
-                                        <InputText @bind-Value="SignInModel.Password" type="password" id="Password" autocomplete="current-password" class="form-control"/>
-                                        <ValidationMessage For="@(() => SignInModel.Password)"/>
+                                        <InputText @bind-Value="SignInModel.Password" type="password" id="Password" autocomplete="current-password" class="form-control" />
+                                        <ValidationMessage For="@(() => SignInModel.Password)" />
                                     </div>
                                     @if (SignInModel.RequireTwoFactor)
                                     {
                                         <div>
                                             <label for="TwoFactorCode" class="form-label">Two Factor Code</label>
-                                            <InputText @bind-Value="SignInModel.TwoFactorCode" type="number" id="TwoFactorCode" autocomplete="one-time-code" class="form-control hide-number-spin"/>
-                                            <ValidationMessage For="@(() => SignInModel.TwoFactorCode)"/>
+                                            <InputText @bind-Value="SignInModel.TwoFactorCode" type="number" id="TwoFactorCode" autocomplete="one-time-code" class="form-control hide-number-spin" />
+                                            <ValidationMessage For="@(() => SignInModel.TwoFactorCode)" />
                                         </div>
                                     }
                                 </div>
@@ -127,37 +126,35 @@
                 <ul class="list-group list-group-flush list-group-links">
                     <li class="list-group-item">
                         <a href="@Routes.Account">
-                            <Icon Symbol="nav-account"/>
+                            <Icon Symbol="nav-account" />
                             <span>Account Details</span>
-                            <Icon Symbol="caret-right"/>
+                            <Icon Symbol="caret-right" />
                         </a>
                     </li>
                     <li class="list-group-item">
                         <a href="@Routes.NotificationSettings">
-                            <Icon Symbol="nav-notifications"/>
+                            <Icon Symbol="nav-notifications" />
                             <span>Notifications</span>
-                            <Icon Symbol="caret-right"/>
+                            <Icon Symbol="caret-right" />
                         </a>
                     </li>
                 </ul>
             </div>
         </AuthorizeView>
 
-        @if (!NeedsEncryptionKey)
-        {
-            <AuthorizeView Policy="@AppPolicies.CanModifySettings">
-                <h2>Store</h2>
+        <AuthorizeView Policy="@AppPolicies.CanModifySettings">
+            <h2>Store</h2>
                 <div class="box">
                     <ul class="list-group list-group-flush list-group-links">
                         @if (CurrentUser?.Stores?.Count() > 0 || CurrentStore == null)
                         {
                             <li class="list-group-item">
                                 <a href="@Routes.SelectStore" class="@(CurrentStore != null ? "pt-1 pb-2" : "justify-content-start")">
-                                    <Icon Symbol="nav-store"/>
+                                    <Icon Symbol="nav-store" />
                                     @if (CurrentStore == null)
                                     {
                                         <span>Select Store</span>
-                                        <Icon Symbol="caret-right"/>
+                                        <Icon Symbol="caret-right" />
                                     }
                                     else
                                     {
@@ -174,9 +171,9 @@
                         {
                             <li class="list-group-item">
                                 <a href="@Routes.CreateStore">
-                                    <Icon Symbol="nav-store"/>
+                                    <Icon Symbol="nav-store" />
                                     <span>Create Store</span>
-                                    <Icon Symbol="caret-right"/>
+                                    <Icon Symbol="caret-right" />
                                 </a>
                             </li>
                         }
@@ -185,27 +182,27 @@
                             <AuthorizeView Policy="@Policies.CanViewStoreSettings" Resource="@CurrentStore.Id" Context="store">
                                 <li class="list-group-item">
                                     <a href="@Routes.StorePath(CurrentStore.Id)">
-                                        <Icon Symbol="nav-store-settings"/>
+                                        <Icon Symbol="nav-store-settings" />
                                         <span>Store Settings</span>
-                                        <Icon Symbol="caret-right"/>
+                                        <Icon Symbol="caret-right" />
                                     </a>
                                 </li>
                             </AuthorizeView>
                             <AuthorizeView Policy="@Policies.CanModifyStoreSettings" Resource="@CurrentStore.Id" Context="store">
                                 <li class="list-group-item">
                                     <a href="@Routes.StoreUsersPath(CurrentStore.Id)">
-                                        <Icon Symbol="nav-account"/>
+                                        <Icon Symbol="nav-account" />
                                         <span>Users</span>
-                                        <Icon Symbol="caret-right"/>
+                                        <Icon Symbol="caret-right" />
                                     </a>
                                 </li>
                                 @if (CurrentStore.PosAppId != null)
                                 {
                                     <li class="list-group-item">
                                         <a href="@Routes.PosSettingsPath(CurrentStore.PosAppId)">
-                                            <Icon Symbol="nav-pointofsale"/>
+                                            <Icon Symbol="nav-pointofsale" />
                                             <span>Checkout</span>
-                                            <Icon Symbol="caret-right"/>
+                                            <Icon Symbol="caret-right" />
                                         </a>
                                     </li>
                                 }
@@ -215,55 +212,68 @@
                 </div>
             </AuthorizeView>
 
-            @if (State.Value.ConnectionState == BTCPayConnectionState.ConnectedAsPrimary)
-            {
-                <AuthorizeView Policy="@AppPolicies.CanModifySettings">
-                    <h2>Bitcoin</h2>
-                    <div class="box">
-                        <ul class="list-group list-group-flush list-group-links">
-                            <li class="list-group-item">
-                                <a href="@Routes.WalletSettings">
-                                    <Icon Symbol="wallet-wallet"/>
-                                    <span>Onchain Wallet</span>
-                                    <Icon Symbol="caret-right"/>
-                                </a>
-                            </li>
-                            <li class="list-group-item">
-                                <a href="@Routes.LightningSettings">
-                                    <Icon Symbol="lightning-node"/>
-                                    <span>Lightning Node</span>
-                                    <Icon Symbol="caret-right"/>
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-                </AuthorizeView>
-            }
-        }
+        <AuthorizeView Policy="@AppPolicies.CanModifySettings">
+            <h2>Wallet</h2>
+            <div class="box">
+                <ul class="list-group list-group-flush list-group-links">
+                    <li class="list-group-item">
+                        <a href="@Routes.WalletBackup">
+                            <Icon Symbol="key" />
+                            <span>Back up mnemonic</span>
+                            @if (_backupVerifiedAt is null)
+                            {
+                                <span class="badge bg-danger ms-auto">Pending</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted ms-auto">@_backupVerifiedAt.Value.ToLocalTime().ToString("yyyy-MM-dd")</span>
+                            }
+                            <Icon Symbol="caret-right" />
+                        </a>
+                    </li>
+                    <li class="list-group-item">
+                        <a href="@Routes.WalletNetwork">
+                            <Icon Symbol="nav-server-settings" />
+                            <span>Arkade network</span>
+                            <span class="text-muted ms-auto">@_networkName</span>
+                            <Icon Symbol="caret-right" />
+                        </a>
+                    </li>
+                    <li class="list-group-item">
+                        <a href="@Routes.SignerStatus">
+                            <Icon Symbol="dots" class="p-2" />
+                            <span>Signer status</span>
+                            <Icon Symbol="caret-right" />
+                        </a>
+                    </li>
+                    <li class="list-group-item">
+                        <a href="@Routes.WalletRecover">
+                            <Icon Symbol="wallet-seed" />
+                            <span>Recover from mnemonic</span>
+                            <span class="text-muted ms-auto">Hot-standby pairing</span>
+                            <Icon Symbol="caret-right" />
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </AuthorizeView>
 
         <AuthorizeView Policy="@AppPolicies.CanModifySettings">
             <h2>Security</h2>
             <div class="box">
                 <ul class="list-group list-group-flush list-group-links">
-                    <li class="list-group-item">
-                        <a href="@Routes.Pairing">
-                            <Icon Symbol="nav-transactions"/>
-                            <span>Device pairing</span>
-                            <Icon Symbol="caret-right"/>
-                        </a>
-                    </li>
                     @*<li class="list-group-item">
                         <a href="@Routes.ChangePasscode">
-                            <Icon Symbol="key"/>
+                            <Icon Symbol="key" />
                             <span>@(HasPasscode ? "Change" : "Set") Passcode</span>
-                            <Icon Symbol="caret-right"/>
+                            <Icon Symbol="caret-right" />
                         </a>
                     </li>*@
                     <li class="list-group-item">
                         <a href="@Routes.ChangePassword">
-                            <Icon Symbol="dots" class="p-2"/>
+                            <Icon Symbol="dots" class="p-2" />
                             <span>Change Password</span>
-                            <Icon Symbol="caret-right"/>
+                            <Icon Symbol="caret-right" />
                         </a>
                     </li>
                 </ul>
@@ -275,9 +285,9 @@
                     <ul class="list-group list-group-flush list-group-links">
                         <li class="list-group-item">
                             <a href="@Routes.ServerUsers">
-                                <Icon Symbol="nav-account"/>
+                                <Icon Symbol="nav-account" />
                                 <span>Users</span>
-                                <Icon Symbol="caret-right"/>
+                                <Icon Symbol="caret-right" />
                             </a>
                         </li>
                     </ul>
@@ -289,25 +299,16 @@
                 <ul class="list-group list-group-flush list-group-links">
                     <li class="list-group-item">
                         <div class="justify-content-start">
-                            <span class="m-2 me-3 btcpay-status btcpay-status--@(State.Value.ConnectionState switch { BTCPayConnectionState.ConnectedAsPrimary or BTCPayConnectionState.ConnectedAsSecondary or BTCPayConnectionState.ConnectedFinishedInitialSync => "enabled", BTCPayConnectionState.Disconnected => "disabled", _ => "pending" })"></span>
+                            <span class="m-2 me-3 btcpay-status btcpay-status--@(State.Value.ConnectionState switch { BTCPayConnectionState.Connected => "enabled", BTCPayConnectionState.Disconnected => "disabled", _ => "pending" })"></span>
                             <span>
                                 Hub:
                                 @(State.Value.ConnectionState switch
                                 {
-                                    BTCPayConnectionState.ConnectedAsPrimary => "Connected as primary device",
-                                    BTCPayConnectionState.ConnectedAsSecondary => "Connected as secondary device",
-                                    BTCPayConnectionState.ConnectedFinishedInitialSync => "Connected, initial sync finished",
+                                    BTCPayConnectionState.Connected => "Connected",
                                     BTCPayConnectionState.WaitingForAuth => "Waiting for authentication",
-                                    BTCPayConnectionState.WaitingForEncryptionKey => "Waiting for encryption key",
                                     _ => State.Value.ConnectionState.ToString()
                                 })
                             </span>
-                            @if (State.Value.ConnectionState == BTCPayConnectionState.ConnectedAsPrimary)
-                            {
-                                <button type="button" class="btn btn-link fw-semibold px-2 py-1 ms-auto" @onclick="SwitchToSecondary">
-                                    <span>Switch to Secondary</span>
-                                </button>
-                            }
                         </div>
                         @if (InstanceInfo != null)
                         {
@@ -332,60 +333,15 @@
                             </div>
                         }
                     </li>
-                    @if (State.Value.ConnectionState == BTCPayConnectionState.ConnectedAsPrimary)
-                    {
-                        <li class="list-group-item">
-                            <div class="justify-content-start">
-                                <span class="m-2 me-3 btcpay-status btcpay-status--@(State.Value.OnchainWalletState switch { OnChainWalletState.Loaded => "enabled", OnChainWalletState.Init => "disabled", _ => "pending" })"></span>
-                                <span>
-                                    Wallet:
-                                    @(State.Value.OnchainWalletState switch
-                                    {
-                                        OnChainWalletState.NotConfigured => "Not configured",
-                                        OnChainWalletState.WaitingForConnection => "Waiting for connection",
-                                        _ => State.Value.OnchainWalletState.ToString()
-                                    })
-                                </span>
-                            </div>
-                        </li>
-                        <li class="list-group-item">
-                            <div class="justify-content-start">
-                                <span class="m-2 me-3 btcpay-status btcpay-status--@(State.Value.LightningNodeState switch { LightningNodeState.Loaded => "enabled", LightningNodeState.Error or LightningNodeState.Stopped=> "disabled", _ => "pending" })"></span>
-                                <span>
-                                    Lightning:
-                                    @(State.Value.LightningNodeState switch
-                                    {
-                                        LightningNodeState.NotConfigured => "Not configured",
-                                        LightningNodeState.WaitingForConnection => "Waiting for connection",
-                                        _ => State.Value.LightningNodeState.ToString()
-                                    })
-                                </span>
-                            </div>
-                        </li>
-                    }
                 </ul>
             </div>
             <div class="box">
                 <ul class="list-group list-group-flush list-group-links">
-                    @if (false && _fees is { Length: > 0 })
-                    {
-                        <li class="list-group-item">
-                            <div class="justify-content-start py-3">
-                                <Icon Symbol="block"/>
-                                <span>
-                                    <span>Fees in sat/vB:</span>
-                                    <span>@_fees[0] (high)</span>
-                                    <span>@_fees[1] (mid)</span>
-                                    <span>@_fees[2] (low)</span>
-                                </span>
-                            </div>
-                        </li>
-                    }
                     <li class="list-group-item">
                         <a href="@Routes.AppLogs">
                             <Icon Symbol="nav-server-settings" />
                             <span>App Logs</span>
-                            <Icon Symbol="caret-right"/>
+                            <Icon Symbol="caret-right" />
                         </a>
                     </li>
                 </ul>
@@ -393,17 +349,6 @@
         </AuthorizeView>
         <h2>Logout</h2>
         <div class="box">
-            @switch (State.Value.ConnectionState)
-            {
-                case BTCPayConnectionState.ConnectedAsPrimary:
-                    <p>This device is currently connected as the primary device for communication with the BTCPay Server.</p>
-                    <p>Please note that when you sign out of the account on this device, your Lightning node will go offline, and you will not be able to receive any payments.</p>
-                    break;
-                case BTCPayConnectionState.ConnectedAsSecondary:
-                    <p>This device is currently connected as an additional device for communication with the BTCPay Server.</p>
-                    <p>Please ensure that your primary device is still connected to the BTCPay Server, because otherwise you will not be able to receive any payments.</p>
-                    break;
-            }
             <button class="btn btn-outline-danger w-100 mt-2" type="button" @onclick="Logout">Logout</button>
         </div>
     </section>
@@ -419,11 +364,11 @@
     private AppUserStoreInfo? CurrentStore => AccountManager.CurrentStore;
     private AppInstanceInfo? InstanceInfo => UiState.Value.Instance?.Data;
     private AppUserInfo? CurrentUser => UserState.Value.Info?.Data;
-    private bool NeedsEncryptionKey => ConnectionManager.ConnectionState == BTCPayConnectionState.WaitingForEncryptionKey;
     private bool _sending;
     private string? _errorMessage;
-    private int[]? _fees;
     private long _deviceId;
+    private DateTimeOffset? _backupVerifiedAt;
+    private string _networkName = "";
 
     private class SettingsModel
     {
@@ -449,46 +394,27 @@
         _account = AccountManager.Account;
         _config = await ConfigProvider.Get<BTCPayAppConfig>(BTCPayAppConfig.Key);
         _deviceId = await ConfigProvider.GetDeviceIdentifier();
+        _backupVerifiedAt = await BackupService.GetBackupVerifiedAtAsync();
+        // Show the network only after the device has synced one from the paired
+        // BTCPay store — pre-pair "we're still using the bundled default"
+        // shouldn't masquerade as a confirmed choice.
+        var serverConfig = await OperatorConfig.GetServerConfigAsync();
+        _networkName = serverConfig?.NetworkType ?? "Not synced";
 
         Model.Theme = UiState.Value.SelectedTheme;
-        ConnectionManager.ConnectionChanged += OnConnectionChanged;
-
-        await UpdateFees();
     }
 
     protected override ValueTask DisposeAsyncCore(bool disposing)
     {
         base.DisposeAsyncCore(disposing);
 
-        ConnectionManager.ConnectionChanged += OnConnectionChanged;
-
         return ValueTask.CompletedTask;
-    }
-
-    private async Task OnConnectionChanged(object? sender, (BTCPayConnectionState Old, BTCPayConnectionState New) e)
-    {
-        await UpdateFees();
-    }
-
-    private async Task UpdateFees()
-    {
-        _fees = (ConnectionManager.ConnectionState is BTCPayConnectionState.ConnectedAsPrimary or BTCPayConnectionState.ConnectedAsSecondary) ? [
-            (int)(await OnChainWalletManager.GetFeeRate(1)).SatoshiPerByte,
-            (int)(await OnChainWalletManager.GetFeeRate(6)).SatoshiPerByte,
-            (int)(await OnChainWalletManager.GetFeeRate(12)).SatoshiPerByte
-        ] : null;
     }
 
     private void SetTheme(string theme)
     {
         Model.Theme = theme;
         Dispatcher.Dispatch(new UIState.ApplyUserTheme(Model.Theme));
-    }
-
-    private async Task SwitchToSecondary()
-    {
-        if (!await AccountManager.IsAuthorized(AppPolicies.CanModifySettings)) return;
-        _ = ConnectionManager.SwitchToSecondary();
     }
 
     private async Task SwitchMode(string mode)

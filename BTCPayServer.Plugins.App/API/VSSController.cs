@@ -23,6 +23,9 @@ namespace BTCPayServer.Plugins.App.API;
 [ProtobufFormatter]
 [Authorize(AuthenticationSchemes = AuthenticationSchemes.GreenfieldAPIKeys)]
 [Route("vss")]
+// API-key-authenticated device storage API: opt out of the global
+// UIControllerAntiforgeryTokenAttribute like AppApiController does.
+[IgnoreAntiforgeryToken]
 public class VSSController(
     AppPluginDbContextFactory dbContextFactory,
     UserManager<ApplicationUser> userManager,

@@ -42,17 +42,18 @@ public class AuthorizationHandler(IOptionsMonitor<IdentityOptions> identityOptio
             }
         }
 
-        if (Policies.IsServerPolicy(policy) && isAdmin)
+        var policyType = Permission.TryGetPolicyType(policy);
+        if (policyType == PolicyType.Server && isAdmin)
         {
             success = true;
         }
-        else if (Policies.IsUserPolicy(policy) && !string.IsNullOrEmpty(userId))
+        else if (policyType == PolicyType.User && !string.IsNullOrEmpty(userId))
         {
             success = true;
         }
-        else if (Policies.IsStorePolicy(policy) && !string.IsNullOrEmpty(storeId))
+        else if (policyType == PolicyType.Store && !string.IsNullOrEmpty(storeId))
         {
-            if (!success && permissionSet.Contains(policy, storeId))
+            if (!success && permissionSet.ContainsPolicy(policy, storeId))
             {
                 success = true;
             }
@@ -62,7 +63,7 @@ public class AuthorizationHandler(IOptionsMonitor<IdentityOptions> identityOptio
                 success = true;
             }
         }
-        else if (Policies.IsPluginPolicy(policy) && policy.StartsWith("btcpay.plugin.app"))
+        else if (policy.StartsWith("btcpay.plugin.app"))
         {
             success = isOwner;
         }

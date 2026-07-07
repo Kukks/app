@@ -1,0 +1,25 @@
+@using BTCPayApp.Core.Models
+@using BTCPayApp.Core.Services
+@inject MainnetPreflightService PreflightService
+
+@if (_result is not null && !_result.NotApplicable && !_result.AllPassed)
+{
+    <div class="alert alert-warning d-flex flex-column gap-2 mx-3 my-3" role="alert">
+        <div class="fw-semibold">Not ready for mainnet</div>
+        <ul class="mb-0">
+            @foreach (var check in _result.Checks)
+            {
+                <li class="@(check.Passed ? "text-muted" : "")">
+                    @(check.Passed ? "✓" : "✗") @check.Label
+                </li>
+            }
+        </ul>
+    </div>
+}
+
+@code {
+    private PreflightResult? _result;
+
+    protected override async Task OnParametersSetAsync()
+        => _result = await PreflightService.EvaluateAsync();
+}

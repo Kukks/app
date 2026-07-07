@@ -2,7 +2,6 @@ using BTCPayApp.Core.Auth;
 using BTCPayApp.Core.BTCPayServer;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Helpers;
-using BTCPayApp.Core.Wallet;
 using BTCPayApp.UI.Features;
 using Fluxor;
 using Microsoft.Extensions.Logging;
@@ -13,8 +12,6 @@ namespace BTCPayApp.UI;
 public class StateMiddleware(
     ConfigProvider configProvider,
     BTCPayConnectionManager btcPayConnectionManager,
-    LightningNodeManager lightningNodeService,
-    OnChainWalletManager onChainWalletManager,
     BTCPayAppServerClient btcpayAppServerClient,
     IAccountManager accountManager,
     NavigationManager navigationManager,
@@ -58,112 +55,42 @@ public class StateMiddleware(
         }
     }
 
-    private async Task ListenIn(IDispatcher dispatcher)
+    private Task ListenIn(IDispatcher dispatcher)
     {
         dispatcher.Dispatch(new RootState.ConnectionStateUpdatedAction(btcPayConnectionManager.ConnectionState));
-        dispatcher.Dispatch(new RootState.LightningNodeStateUpdatedAction(lightningNodeService.State));
-        dispatcher.Dispatch(new RootState.OnChainWalletStateUpdatedAction(onChainWalletManager.State));
         dispatcher.Dispatch(new UserState.SetInfo(accountManager.UserInfo, null));
 
-        btcPayConnectionManager.ConnectionChanged += async (_, _) =>
+        btcPayConnectionManager.ConnectionChanged += (_, _) =>
         {
             dispatcher.Dispatch(new RootState.ConnectionStateUpdatedAction(btcPayConnectionManager.ConnectionState));
 
-            // initial wallet generation
-            if (AppSettings.AutoGenerateWallets &&
-                onChainWalletManager is { State: OnChainWalletState.NotConfigured } && 
-                await onChainWalletManager.CanConfigureWallet())
+            if (btcPayConnectionManager.ConnectionState == BTCPayConnectionState.Connected)
             {
-                 await onChainWalletManager.Generate();
-            }
-
-            // refresh after returning from the background
-            if (btcPayConnectionManager.ConnectionState == BTCPayConnectionState.ConnectedFinishedInitialSync && !_previouslyConnected)
-            {
-                _previouslyConnected = true;
-            }
-            else if (btcPayConnectionManager.ConnectionState == BTCPayConnectionState.Syncing && _previouslyConnected && accountManager.CurrentStore is { } store)
-            {
-                dispatcher.Dispatch(new StoreState.RefreshStore(store));
-            }
-        };
-
-        onChainWalletManager.StateChanged += async (_, _) =>
-        {
-            dispatcher.Dispatch(new RootState.OnChainWalletStateUpdatedAction(onChainWalletManager.State));
-            if (accountManager.CurrentStore is { } store)
-            {
-                switch (onChainWalletManager.State)
+                // refresh after returning from the background
+                if (!_previouslyConnected)
                 {
-                    case OnChainWalletState.Loaded:
-                        var res = await accountManager.TryApplyingAppPaymentMethodsToCurrentStore(onChainWalletManager, lightningNodeService, true, false);
-                        if (res is { onchain: {} onchain } &&  await onChainWalletManager.IsOnChainOurs(onchain))
-                        {
-                            _dispatcher.Dispatch(new StoreState.FetchOnchainBalance(store.Id));
-                            _dispatcher.Dispatch(new StoreState.FetchOnchainHistogram(store.Id));
-                        }
-                        break;
-                    case OnChainWalletState.NotConfigured when await onChainWalletManager.CanConfigureWallet() && AppSettings.AutoGenerateWallets:
-                         await onChainWalletManager.Generate();
-                        break;
+                    _previouslyConnected = true;
                 }
-            }
-        };
-
-        onChainWalletManager.OnSnapshotUpdate += (_, _) =>
-        {
-            if (accountManager.CurrentStore is { } store)
-            {
-                dispatcher.Dispatch(new StoreState.FetchBalances(store.Id));
+                else if (accountManager.CurrentStore is { } store)
+                {
+                    dispatcher.Dispatch(new StoreState.RefreshStore(store));
+                }
             }
             return Task.CompletedTask;
         };
 
-        lightningNodeService.StateChanged += async (_, _) =>
-        {
-            dispatcher.Dispatch(new RootState.LightningNodeStateUpdatedAction(lightningNodeService.State));
-            if (lightningNodeService is {State: LightningNodeState.NotConfigured} && 
-                await lightningNodeService.CanConfigureLightningNode() && 
-                AppSettings.AutoGenerateWallets)
-            {
-                try
-                {
-                    // await lightningNodeService.Generate();
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "Error configuring LN wallet");
-                }
-            }
-            if (lightningNodeService.State == LightningNodeState.Loaded)
-            {
-                var res = await accountManager.TryApplyingAppPaymentMethodsToCurrentStore(onChainWalletManager, lightningNodeService, false, true);
-                if (res is { lightning: {} lightning } && await lightningNodeService.IsLightningOurs(lightning))
-                {
-                    if (accountManager.CurrentStore is { } store)
-                    {
-                        dispatcher.Dispatch(new StoreState.FetchLightningBalance(store.Id));
-                        dispatcher.Dispatch(new StoreState.FetchLightningHistogram(store.Id));
-                    }
-                }
-            }
-        };
-
-        accountManager.OnStoreChanged += async (_, storeInfo) =>
+        accountManager.OnStoreChanged += (_, storeInfo) =>
         {
             dispatcher.Dispatch(new StoreState.SetStoreInfo(storeInfo));
             if (storeInfo != null)
             {
-                var res = await accountManager.TryApplyingAppPaymentMethodsToCurrentStore(onChainWalletManager, lightningNodeService, true, true);
-                var refresh = res is { onchain: {} onchain } && await onChainWalletManager.IsOnChainOurs(onchain) ||
-                                   res is { lightning: {} lightning } && await lightningNodeService.IsLightningOurs(lightning);
-                if (refresh)
-                    dispatcher.Dispatch(new StoreState.FetchBalances(storeInfo.Id));
+                dispatcher.Dispatch(new StoreState.FetchBalances(storeInfo.Id));
                 if (storeInfo.PosAppId != null)
                     dispatcher.Dispatch(new StoreState.FetchPointOfSaleStats(storeInfo.PosAppId));
             }
 
             navigationManager.NavigateTo(Routes.Index);
+            return Task.CompletedTask;
         };
 
         accountManager.OnUserInfoChanged += (_, userInfo) =>
@@ -245,12 +172,6 @@ public class StateMiddleware(
         _ratesCts = new CancellationTokenSource();
         _ = RefreshRates(dispatcher, _ratesCts.Token);
 
-        // initial wallet generation
-        if (onChainWalletManager is { State: OnChainWalletState.NotConfigured } && 
-            await onChainWalletManager.CanConfigureWallet() && 
-            AppSettings.AutoGenerateWallets)
-        {
-            await onChainWalletManager.Generate();
-        }
+        return Task.CompletedTask;
     }
 }

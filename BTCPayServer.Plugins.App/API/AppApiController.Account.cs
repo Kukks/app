@@ -76,7 +76,8 @@ public partial class AppApiController
 
         // Require the user to pass basic checks (approval, confirmed email, not disabled) before they can log on
         var user = await userManager.FindByEmailAsync(login.Email!);
-        if (!UserService.TryCanLogin(user, out var message))
+        var (canLogin, message) = await TryCanLogin(user);
+        if (!canLogin)
             return this.CreateAPIError(401, "unauthenticated", message);
 
         var signInResult = await signInManager.PasswordSignInAsync(login.Email!, login.Password!, true, true);
@@ -113,7 +114,8 @@ public partial class AppApiController
             var code = loginCode.Split(';').First();
             var userId = userLoginCodeService.Verify(code);
             var user = userId is null ? null : await userManager.FindByIdAsync(userId);
-            if (!UserService.TryCanLogin(user, out var message))
+            var (canLogin, message) = await TryCanLogin(user);
+            if (!canLogin)
                 return this.CreateAPIError(401, "unauthenticated", message);
 
             await signInManager.SignInAsync(user, false, "LoginCode");
@@ -131,7 +133,7 @@ public partial class AppApiController
     {
         if (string.IsNullOrEmpty(invite.UserId) || string.IsNullOrEmpty(invite.Code)) return NotFound();
 
-        var user = await userManager.FindByInvitationTokenAsync<ApplicationUser>(invite.UserId.Trim(), Uri.UnescapeDataString(invite.Code.Trim()));
+        var user = await userManager.FindByInvitationTokenAsync(invite.UserId.Trim(), Uri.UnescapeDataString(invite.Code.Trim()));
         if (user == null) return NotFound();
 
         var requiresEmailConfirmation = user is { RequiresEmailConfirmation: true, EmailConfirmed: false };
@@ -147,7 +149,7 @@ public partial class AppApiController
             if (result.Succeeded)
             {
                 emailHasBeenConfirmed = true;
-                var approvalLink = callbackGenerator.ForApproval(user, Request);
+                var approvalLink = callbackGenerator.ForApproval(user);
                 eventAggregator.Publish(new UserEvent.ConfirmedEmail(user, approvalLink));
             }
         }
@@ -232,10 +234,11 @@ public partial class AppApiController
             return this.CreateValidationError(ModelState);
 
         var user = await userManager.FindByEmailAsync(email!);
-        if (UserService.TryCanLogin(user, out _))
+        var (canLogin, _) = await TryCanLogin(user);
+        if (canLogin)
         {
-            var callbackUri = await callbackGenerator.ForPasswordReset(user, Request);
-            eventAggregator.Publish(new UserEvent.PasswordResetRequested(user, callbackUri));
+            var callbackUri = await callbackGenerator.ForPasswordReset(user!);
+            eventAggregator.Publish(new UserEvent.PasswordResetRequested(user!, callbackUri));
         }
         return Ok();
     }
@@ -256,7 +259,8 @@ public partial class AppApiController
         var user = await userManager.FindByEmailAsync(resetRequest.Email!);
         var needsInitialPassword = user != null && !await userManager.HasPasswordAsync(user);
         // Let unapproved users set a password. Otherwise, don't reveal that the user does not exist.
-        if (!UserService.TryCanLogin(user, out var message) && !needsInitialPassword || user == null)
+        var (canLogin, message) = await TryCanLogin(user);
+        if (!canLogin && !needsInitialPassword || user == null)
         {
             _logger.LogWarning("User {Email} tried to reset password, but failed: {Message}", user?.Email ?? "(NO EMAIL)", message);
             return this.CreateAPIError(401, "unauthenticated", "Invalid request");
@@ -277,7 +281,8 @@ public partial class AppApiController
         if (!needsInitialPassword) await FinalizeInvitationIfApplicable(user);
 
         // see if we can sign in user after accepting an invitation and setting the password
-        if (needsInitialPassword && UserService.TryCanLogin(user, out _))
+        var (canLoginAfterReset, _) = await TryCanLogin(user);
+        if (needsInitialPassword && canLoginAfterReset)
         {
             var signInResult = await signInManager.PasswordSignInAsync(user.Email!, resetRequest.NewPassword!, true, true);
             if (signInResult.Succeeded)
@@ -355,13 +360,13 @@ public partial class AppApiController
         var stores = new List<AppUserStoreInfo>();
         foreach (var store in userStores)
         {
-            if (!HttpContext.HasPermission(Permission.Create(Policies.CanViewInvoices, store.Id))) continue;
+            if (!HttpContext.HasPermission(Permission.Create(Policies.CanViewInvoices, store.Id), permissionService)) continue;
 
             var userStore = store.UserStores.Find(us => us.ApplicationUserId == user.Id && us.StoreDataId == store.Id)!;
             var apps = await appService.GetAllApps(user.Id, false, store.Id);
             var posApp = apps.FirstOrDefault(app => app.AppType == PointOfSaleAppType.AppType && app.App.GetSettings<PointOfSaleSettings>().DefaultView == PosViewType.Light);
             var storeBlob = userStore.StoreData.GetStoreBlob();
-            var storePermissions = isUnrestricted ? userStore.StoreRole.Permissions : apiKeyPermissions.Where(Policies.IsStorePolicy);
+            var storePermissions = isUnrestricted ? userStore.StoreRole.Permissions : apiKeyPermissions.Where(p => Permission.TryGetPolicyType(p) is PolicyType.Store);
             stores.Add(new AppUserStoreInfo
             {
                 Id = store.Id,
@@ -394,12 +399,19 @@ public partial class AppApiController
 
     private async Task FinalizeInvitationIfApplicable(ApplicationUser user)
     {
-        if (!userManager.HasInvitationToken<ApplicationUser>(user)) return;
+        if (!userManager.HasInvitationToken(user)) return;
 
-        // This is a placeholder, the real storeIds will be set by the UserEventHostedService
-        var storeUsersLink = callbackGenerator.StoreUsersLink("{0}", Request);
-        eventAggregator.Publish(new UserEvent.InviteAccepted(user, storeUsersLink));
         // unset used token
-        await userManager.UnsetInvitationTokenAsync<ApplicationUser>(user.Id);
+        await userManager.UnsetInvitationTokenAsync(user.Id);
+    }
+
+    // Mirrors the old static UserService.TryCanLogin: runs the configured login extensions
+    // and surfaces the first failure message (UserService.CanLogin is now instance/async).
+    private async Task<(bool CanLogin, string Message)> TryCanLogin(ApplicationUser? user)
+    {
+        var context = new UserService.CanLoginContext(user);
+        var canLogin = await userService.CanLogin(context);
+        var message = string.Join(" ", context.Failures.Select(f => f.ToString()));
+        return (canLogin, message);
     }
 }

@@ -1,6 +1,7 @@
 ﻿using BTCPayServer.Abstractions.Extensions;
-using BTCPayServer.Lightning;
 using BTCPayServer.Plugins.App.Data;
+using BTCPayServer.Plugins.App.Services;
+using BTCPayServer.Plugins.ArkPayServer.Services;
 using Laraue.EfCoreTriggers.PostgreSql.Extensions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,7 +14,6 @@ public static class AppExtensions
     {
         serviceCollection.AddGrpc();
         serviceCollection.AddSingleton<BTCPayAppState>();
-        serviceCollection.AddSingleton<ILightningConnectionStringHandler, BTCPayAppLightningConnectionStringHandler>();
         serviceCollection.AddSingleton<AppPluginDbContextFactory>();
         serviceCollection.AddDbContext<AppPluginDbContext>((provider, o) =>
         {
@@ -23,6 +23,14 @@ public static class AppExtensions
         });
         serviceCollection.AddHostedService(serviceProvider => serviceProvider.GetRequiredService<BTCPayAppState>());
         serviceCollection.AddStartupTask<AppPluginMigrationRunner>();
+
+        // Cross-plugin seam: register the BTCPayApp-backed implementation of
+        // btcpay-arkade's IBTCPayAppDeviceProxy. ArkadePlugin's DI factory
+        // falls back to a "no proxy installed" sentinel transport if we don't
+        // register here — when this companion plugin is loaded, it picks up
+        // BTCPayAppDeviceProxy and forwards Arkade signing for Remote-typed
+        // wallets to the paired device over the SignalR hub.
+        serviceCollection.AddSingleton<IBTCPayAppDeviceProxy, BTCPayAppDeviceProxy>();
         return serviceCollection;
     }
 

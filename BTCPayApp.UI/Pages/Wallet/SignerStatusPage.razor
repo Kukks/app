@@ -1,0 +1,60 @@
+@attribute [Route(Routes.SignerStatus)]
+@using BTCPayApp.Core.Models
+@using BTCPayApp.Core.Services
+@using BTCPayApp.UI
+@inject SignerStatusService StatusService
+@inject NavigationManager Nav
+
+<PageTitle>Signer status</PageTitle>
+
+<section class="container py-4">
+    <h1 class="mb-3">Signer status</h1>
+
+    @if (_status is null)
+    {
+        <LoadingIndicator />
+    }
+    else
+    {
+        <div class="box mb-3">
+            <div class="d-flex justify-content-between align-items-center p-3">
+                <div>
+                    <div class="text-muted small">Health</div>
+                    <div class="fw-semibold">@_status.Level</div>
+                </div>
+                <div class="text-end">
+                    <div class="text-muted small">Network</div>
+                    <div>@_status.NetworkName</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="box mb-3">
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item d-flex justify-content-between"><span>Owner wallet id</span><code>@(_status.OwnerWalletId ?? "(none yet)")</code></li>
+                <li class="list-group-item d-flex justify-content-between"><span>Hub connected</span><span>@(_status.HubConnected ? "Yes" : "No")</span></li>
+                <li class="list-group-item d-flex justify-content-between"><span>Backup verified</span><span>@(_status.BackupVerified ? "Yes" : "No")</span></li>
+                <li class="list-group-item d-flex justify-content-between"><span>Last signed</span><span>@(_status.LastSignAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") ?? "Never")</span></li>
+                @if (!string.IsNullOrEmpty(_status.LastError))
+                {
+                    <li class="list-group-item d-flex flex-column"><span class="text-muted small">Last error</span><span class="text-danger">@_status.LastError</span></li>
+                }
+            </ul>
+        </div>
+
+        <div class="d-flex gap-2 flex-column flex-md-row">
+            @if (!_status.BackupVerified)
+            {
+                <a class="btn btn-primary flex-fill" href="@Routes.WalletBackup">Back up wallet</a>
+            }
+            <a class="btn btn-outline-secondary flex-fill" href="@Routes.WalletNetwork">Network settings</a>
+        </div>
+    }
+</section>
+
+@code {
+    private SignerStatus? _status;
+
+    protected override async Task OnInitializedAsync()
+        => _status = await StatusService.SnapshotAsync();
+}

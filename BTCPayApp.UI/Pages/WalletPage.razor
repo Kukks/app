@@ -1,0 +1,44 @@
+@attribute [Route(Routes.Wallet)]
+@using BTCPayApp.Core.Auth
+@using BTCPayApp.UI.Features
+@inject IAccountManager AccountManager
+@inject IState<UIState> UIState
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
+
+<PageTitle>Wallet</PageTitle>
+
+<section class="container py-3">
+    @if (string.IsNullOrEmpty(_url))
+    {
+        <Alert Type="info">Pair this device with a BTCPay server and select a store to use the wallet.</Alert>
+    }
+    else
+    {
+        <iframe src="@_url"
+                title="Arkade wallet"
+                class="wallet-iframe"
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                referrerpolicy="strict-origin-when-cross-origin"></iframe>
+    }
+</section>
+
+<style>
+    .wallet-iframe { width:100%; height:calc(100vh - 4rem); border:none; }
+</style>
+
+@code {
+    private string? _url;
+
+    protected override void OnParametersSet()
+    {
+        var baseUrl = UIState.Value.Instance?.Data?.BaseUrl;
+        var storeId = AccountManager.CurrentStore?.Id;
+        if (string.IsNullOrEmpty(baseUrl) || string.IsNullOrEmpty(storeId))
+        {
+            _url = null;
+            return;
+        }
+        var trimmed = baseUrl.TrimEnd('/');
+        _url = $"{trimmed}/plugins/ark/stores/{storeId}/overview";
+    }
+}

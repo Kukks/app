@@ -6,7 +6,7 @@
     <div id="channel-@Channel.Id" class="d-flex flex-column gap-2 accordion-header">
         <div class="d-flex align-items-center justify-content-between gap-2">
             <div class="me-auto">
-                <TruncateCenter Text="@Channel.Id" Padding="10" class="fw-semibold me-auto"/>
+                <TruncateCenter Text="@Channel.Id" Padding="10" class="fw-semibold me-auto" />
                 @if (!string.IsNullOrEmpty(Channel.CounterpartyLabel))
                 {
                     <div class="text-muted">@Channel.CounterpartyLabel</div>
@@ -14,11 +14,11 @@
             </div>
             @if (Loading)
             {
-                <LoadingIndicator/>
+                <LoadingIndicator />
             }
             <span class="btcpay-status btcpay-status--@ChannelState"></span>
             <button class="accordion-button collapsed w-auto p-0" type="button" data-bs-toggle="collapse" data-bs-target="#peer-@Channel.Id-details" aria-expanded="false" aria-controls="peer-@Channel.Id-details">
-                <Icon Symbol="caret-down"/>
+                <Icon Symbol="caret-down" />
             </button>
         </div>
         @if (Channel.CapacityOutbound is not null && Channel.CapacityInbound is not null)
@@ -42,21 +42,21 @@
             @if (!string.IsNullOrEmpty(Channel.CounterpartyLabel))
             {
                 <div class="form-floating">
-                    <TruncateCenter Text="@Channel.CounterpartyLabel" Padding="20" Elastic="true" class="form-control-plaintext"/>
+                    <TruncateCenter Text="@Channel.CounterpartyLabel" Padding="20" Elastic="true" class="form-control-plaintext" />
                     <label>Counterparty</label>
                 </div>
             }
             @if (!string.IsNullOrEmpty(Channel.CounterpartyNodeId))
             {
                 <div class="form-floating">
-                    <TruncateCenter Text="@Channel.CounterpartyNodeId" Padding="10" Copy="true" Elastic="true" class="form-control-plaintext"/>
+                    <TruncateCenter Text="@Channel.CounterpartyNodeId" Padding="10" Copy="true" Elastic="true" class="form-control-plaintext" />
                     <label>Counterparty Node ID</label>
                 </div>
             }
             @if (!string.IsNullOrEmpty(Channel.FundingTxHash))
             {
                 <div class="form-floating">
-                    <TruncateCenter Text="@Channel.FundingTxHash" Padding="10" Copy="true" Elastic="true" class="form-control-plaintext"/>
+                    <TruncateCenter Text="@Channel.FundingTxHash" Padding="10" Copy="true" Elastic="true" class="form-control-plaintext" />
                     <label>Funding Transaction</label>
                 </div>
             }

@@ -28,7 +28,7 @@
                 if (Loading)
                 {
                     <div class="p-3 text-center">
-                        <LoadingIndicator/>
+                        <LoadingIndicator />
                     </div>
                 }
                 else if (!string.IsNullOrEmpty(Error))
@@ -39,12 +39,12 @@
             else
             {
                 <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" SuccessMessage="@_successMessage" ErrorMessage="@Error" class="box">
-                    <DataAnnotationsValidator/>
+                    <DataAnnotationsValidator />
                     <div id="CtaContainer" class="container d-flex align-items-center justify-content-between">
                         <button type="submit" class="btn btn-primary w-100" disabled="@(_validationEditContext!.Invalid || _sending)">
                             @if (_sending)
                             {
-                                <LoadingIndicator/>
+                                <LoadingIndicator />
                             }
                             else
                             {
@@ -54,8 +54,8 @@
                     </div>
                     <div class="form-group">
                         <label for="Email" class="form-label" data-required>Email</label>
-                        <InputText @bind-Value="Model.Email" id="Email" type="email" class="form-control"/>
-                        <ValidationMessage For="@(() => Model.Email)"/>
+                        <InputText @bind-Value="Model.Email" id="Email" type="email" class="form-control" />
+                        <ValidationMessage For="@(() => Model.Email)" />
                     </div>
                     <div class="form-group">
                         <label for="Role" class="form-label">Role</label>
@@ -65,7 +65,7 @@
                                 <option value="@r.Id" selected="@(Model.Role == r.Id)">@r.Role</option>
                             }
                         </InputSelect>
-                        <ValidationMessage For="@(() => Model.Role)"/>
+                        <ValidationMessage For="@(() => Model.Role)" />
                     </div>
                 </ValidationEditContext>
             }
