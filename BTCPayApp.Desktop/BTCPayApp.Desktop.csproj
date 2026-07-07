@@ -11,8 +11,10 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Microsoft.AspNetCore.DataProtection" Version="8.0.11" />
-      <PackageReference Include="Microsoft.JSInterop" Version="8.0.16" />
+      <!-- 10.0.9: latest 10.x patch. DataProtection 10.0.6 carries a critical advisory
+           (GHSA-9mv3-2cwr-p262); 10.0.9 clears it while aligning both packages to net10. -->
+      <PackageReference Include="Microsoft.AspNetCore.DataProtection" Version="10.0.9" />
+      <PackageReference Include="Microsoft.JSInterop" Version="10.0.9" />
       <PackageReference Include="Plugin.Fingerprint" Version="3.0.0-beta.1" />
     </ItemGroup>
 

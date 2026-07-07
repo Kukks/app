@@ -109,7 +109,9 @@ public class DatabaseConfigProvider(
     public override async Task Set<T>(string key, T? value, bool backup) where T : default
     {
         using var releaser = await _lock.LockAsync(key);
-        logger.LogDebug("Setting {Key} to {Value}", key, value);
+        // Log the key only — values pass secrets through here (e.g. the Arkade owner
+        // mnemonic at ark:owner:mnemonic, auth tokens), which must never hit the logs.
+        logger.LogDebug("Setting {Key}", key);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         if (value is null)
         {
